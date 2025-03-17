@@ -1,0 +1,11 @@
+pydantic
+fastapi
+uvicorn
+bs4
+requests
+python-dotenv
+boto3
+pandas
+numpy
+docling
+mistralai
