@@ -81,9 +81,9 @@ def replace_images_in_markdown(markdown_str: str, images_dict: dict, s3_obj, bas
         output_buffer.seek(0)
         
         s3_obj.upload_file(s3_obj.bucket_name, element_image_filename, output_buffer.read())
-        
+        element_image_link = f"https://{s3_obj.bucket_name}.s3.amazonaws.com/{f"{element_image_filename}"}"
         markdown_str = markdown_str.replace(
-            f"![{img_name}]({img_name})", f"![{img_name}]({base64_str})"
+            f"![{img_name}]({img_name})", f"![{img_name}]({element_image_link})"
         )
     return markdown_str
 
