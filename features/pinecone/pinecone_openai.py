@@ -61,15 +61,20 @@ def create_pinecone_vector_store(file, chunks, chunk_strategy):
         ))
         if len(vectors) >= 20:
             records += len(vectors)
-            index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
+            upsert_vectors(index, vectors, parser, chunk_strategy)
+            # index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
             print(f"Inserted {len(vectors)} chunks into Pinecone.")
             vectors.clear()
     # Store in Pinecone under the correct namespace
-    index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
-    print(f"Inserted {len(vectors)} chunks into Pinecone.")
-    records += len(vectors)
+    if len(vectors)>0:
+        upsert_vectors(index, vectors, parser, chunk_strategy)
+        # index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
+        print(f"Inserted {len(vectors)} chunks into Pinecone.")
+        records += len(vectors)
     print(f"Inserted {records} chunks into Pinecone.")
-    
+
+def upsert_vectors(index, vectors, parser, chunk_strategy):
+    index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
 
 def main():
     base_path = "nvdia/"
@@ -79,13 +84,14 @@ def main():
     files = files[:1]
     for file in files:
         content = read_markdown_file(file, s3_obj)
-        # chunks = markdown_chunking(content, heading_level=2)
-        # print(f"Chunk size: {len(chunks)}")
-        # create_pinecone_vector_store(file, chunks, "semantic")
-        chunks = semantic_chunking(content, max_sentences=10)
+        chunks = markdown_chunking(content, heading_level=2)
         print(f"Chunk size: {len(chunks)}")
+        # Create Pinecone vector store for the current file
+        create_pinecone_vector_store(file, chunks, "markdown")
+        # chunks = semantic_chunking(content, max_sentences=10)
+        # print(f"Chunk size: {len(chunks)}")
         # # Create Pinecone vector store for the current file
-        create_pinecone_vector_store(file, chunks, "semantic")
+        # create_pinecone_vector_store(file, chunks, "semantic")
     print(files)
     
 if __name__ == "__main__":
