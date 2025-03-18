@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 import time
 
+
 # Set up Chrome options for headless mode
 options = Options()
 options.add_argument("--headless")  
@@ -58,5 +59,7 @@ for year in years_to_select:
 
 driver.quit()
 
+from services.s3 import S3FileManager
 for link in ten_k_q_links:
-    print(f"Year: {link['year']}, Type: {link['type']}, URL: {link['url']}")
+    
+    print(link)
