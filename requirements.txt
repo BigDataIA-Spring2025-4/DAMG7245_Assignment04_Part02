@@ -9,3 +9,5 @@ pandas
 numpy
 docling
 mistralai
+webdriver-manager
+selenium
