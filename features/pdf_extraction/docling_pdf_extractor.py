@@ -29,7 +29,7 @@ logger = logging.getLogger()
 # AWS_BUCKET_NAME = "pdfparserdataset"
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 
-def pdf_docling_converter(pdf_stream: io.BytesIO, base_path, s3_obj, year, quarter):
+def pdf_docling_converter(pdf_stream: io.BytesIO, base_path, s3_obj):
 
     # Prepare pipeline options
     pipeline_options = PdfPipelineOptions()
@@ -58,7 +58,7 @@ def pdf_docling_converter(pdf_stream: io.BytesIO, base_path, s3_obj, year, quart
         # Convert the PDF file to markdown
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         # md_file_name = f"{s3_obj.base_path}/extracted_{timestamp}.md"
-        md_file_name = f"{s3_obj.base_path}/extracted_data.md"
+        md_file_name = f"{base_path}/extracted_data.md"
         # doc_stream = DocumentStream({"name": md_file_name, "stream": pdf_stream})
         conv_result = doc_converter.convert(temp_file.name)
         
@@ -80,7 +80,7 @@ def document_convert(conv_result, base_path, s3_obj):
             picture_counter += 1
             
             # Save the image to a file
-            element_image_filename = f"{s3_obj.base_path}/images/{doc_filename}_image_{picture_counter}.png"
+            element_image_filename = f"{base_path}/images/{doc_filename}_image_{picture_counter}.png"
 
             # Upload the image file to S3   
             # image_data = 
@@ -108,3 +108,21 @@ def document_convert(conv_result, base_path, s3_obj):
             
 
     return final_md_content
+
+
+def main():
+    # pdf_path = "prototypes/input_docs/FY2025Q1.pdf"  # Hardcoded file path
+    base_path = "nvdia/"
+    
+    s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+    files = list({file for file in s3_obj.list_files() if file.endswith('.pdf')})
+    print(files)
+    for file in files:
+        print(file)
+        pdf_file = s3_obj.load_s3_pdf(file)
+        pdf_bytes = io.BytesIO(pdf_file)
+        output_path = f"{s3_obj.base_path}/docling/{file.split('/')[-1].split('.')[0]}"
+        pdf_docling_converter(pdf_bytes, output_path, s3_obj)
+
+if __name__ == "__main__":
+    main()

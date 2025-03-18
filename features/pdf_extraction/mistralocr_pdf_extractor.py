@@ -14,7 +14,6 @@ from services.s3 import S3FileManager
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 MISTRALAI_API_KEY = os.getenv("MISTRALAI_API_KEY") 
 
-
 def pdf_mistralocr_converter(pdf_stream: io.BytesIO, base_path, s3_obj):
     client = Mistral(api_key=MISTRALAI_API_KEY)
     pdf_stream.seek(0)
@@ -46,24 +45,9 @@ def pdf_mistralocr_converter(pdf_stream: io.BytesIO, base_path, s3_obj):
 
     # Upload the markdown file to S3   
     s3_obj.upload_file(s3_obj.bucket_name, md_file_name ,final_md_content.encode('utf-8'))
-
-    # # Convert response to JSON format
-    # response_dict = json.loads(pdf_response.model_dump_json())
-
-    # print(json.dumps(response_dict, indent=4)[0:1000]) # check the first 1000 characters    
     
 
 def replace_images_in_markdown(markdown_str: str, images_dict: dict, s3_obj, base_path) -> str:
-    """
-    Replace image placeholders in markdown with base64-encoded images.
-
-    Args:
-        markdown_str: Markdown text containing image placeholders
-        images_dict: Dictionary mapping image IDs to base64 strings
-
-    Returns:
-        Markdown text with images replaced by base64 data
-    """
     for img_name, base64_str in images_dict.items():
         print(f"Replacing image {img_name}")
         # print(base64_str.split(';')[1].split(',')[1])
@@ -88,15 +72,6 @@ def replace_images_in_markdown(markdown_str: str, images_dict: dict, s3_obj, bas
     return markdown_str
 
 def get_combined_markdown(ocr_response: OCRResponse, s3_obj, base_path) -> str:
-    """
-    Combine OCR text and images into a single markdown document.
-
-    Args:
-        ocr_response: Response from OCR processing containing text and images
-
-    Returns:
-        Combined markdown string with embedded images
-    """
     markdowns: list[str] = []
     # Extract images from page
     for page in ocr_response.pages:
@@ -107,9 +82,6 @@ def get_combined_markdown(ocr_response: OCRResponse, s3_obj, base_path) -> str:
         markdowns.append(replace_images_in_markdown(page.markdown, image_data, s3_obj, base_path))
 
     return "\n\n".join(markdowns)
-
-# Display combined markdowns and images
-# display(Markdown(get_combined_markdown(pdf_response)))
 
 def main():
     # pdf_path = "prototypes/input_docs/FY2025Q1.pdf"  # Hardcoded file path
@@ -123,15 +95,6 @@ def main():
         pdf_bytes = io.BytesIO(pdf_file)
         output_path = f"{s3_obj.base_path}/mistral/{file.split('/')[-1].split('.')[0]}"
         pdf_mistralocr_converter(pdf_bytes, output_path, s3_obj)
-        # pdf_mistralocr_converter(pdf_bytes, base_path, s3_obj)
-        
-    # file = files[0]
-    # pdf_file = s3_obj.load_s3_pdf(file)
-    
-    # with open(pdf_path, "rb") as file:
-    #     pdf_bytes = io.BytesIO(file.read())
-    # pdf_bytes = io.BytesIO(pdf_file)
-    # pdf_mistralocr_converter(pdf_bytes, base_path, s3_obj)
 
 if __name__ == "__main__":
     main()
