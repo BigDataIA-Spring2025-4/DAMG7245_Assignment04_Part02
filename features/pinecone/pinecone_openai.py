@@ -2,7 +2,7 @@ import openai, os, markdown, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
 from dotenv import load_dotenv
-from chunk_strategy import markdown_chunking, semantic_chunking
+from features.pinecone.chunk_strategy import markdown_chunking, semantic_chunking
 load_dotenv()
 
 # Initialize Pinecone
@@ -83,7 +83,7 @@ def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", qua
     dense_vector = get_embedding(query)
     
     results = index.query(
-        namespace="docling_markdown",
+        namespace=f"{parser}_{chunking_strategy}",
         vector=dense_vector,  # Dense vector embedding
         filter={
             "year": {"$eq": year},
@@ -95,11 +95,13 @@ def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", qua
     
     # print(results)
     # Print the retrieved documents
-    
+    responses = []
     for match in results["matches"]:
         print(f"ID: {match['id']}, Score: {match['score']}")
         # print(f"Chunk: {match['metadata']['text']}\n")
+        responses.append(match['metadata']['text'])
         print("=================================================================================")
+    return responses
 
 def main():
     base_path = "nvdia/"
