@@ -9,6 +9,5 @@ pandas
 numpy
 docling
 mistralai
-PIL
-spacy
-pinecone
+webdriver-manager
+selenium
