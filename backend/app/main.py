@@ -64,11 +64,11 @@ def generate_pinecone_openai_message(chunks, year, quarter, query):
     prompt = f"""
     Below are relevant excerpts from a NVDIA quarterly financial report for year {year} and quarter {quarter} that may help answer the query.
 
-    --- Relevant Document Chunks ---
-    {chr(10).join([f'Chunk {i+1}: {chunk}' for i, chunk in enumerate(chunks)])}
-
     --- User Query ---
     {query}
+
+    --- Relevant Document Chunks ---
+    {chr(10).join([f'Chunk {i+1}: {chunk}' for i, chunk in enumerate(chunks)])}
 
     Based on the provided document chunks, generate a comprehensive response to the query. If needed, synthesize the information and ensure clarity.
     """
