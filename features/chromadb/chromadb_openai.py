@@ -2,6 +2,7 @@ import os
 import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
 from chromadb.config import Settings
+from fastapi import HTTPException
 
 import tempfile
 from dotenv import load_dotenv
@@ -24,7 +25,6 @@ def get_chroma_embeddings(texts):
                 model_name="text-embedding-3-small"
             )
     return openai_ef(texts)
-
 
 
 def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
@@ -114,7 +114,7 @@ def download_chromadb_from_s3(s3_obj, temp_dir):
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         
         # Download the file from S3
-        content = s3_obj.load_s3_file_content(s3_file, decode_as_text=False)
+        content = s3_obj.load_s3_pdf(s3_file)
         with open(local_path, 'wb') as f:
             f.write(content if isinstance(content, bytes) else content.encode('utf-8'))
 
@@ -133,7 +133,12 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
             # Create embeddings for the query
             query_embeddings = get_chroma_embeddings([query])
             
-            where_filter={"quarter": quarter, "year": year}
+            where_filter = {
+                        "$and": [
+                            {"quarter": {"$eq": quarter}},
+                            {"year": {"$eq": year}}
+                        ]
+                    }
             # Execute the query
             results = collection.query(
                 query_embeddings=query_embeddings,
