@@ -14,7 +14,7 @@ options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) App
 
 # Set up the WebDriver with options
 driver = webdriver.Remote(
-    command_executor='http://localhost:4444/wd/hub',
+    command_executor="http://localhost:4444/wd/hub",
     options=options
 )
 driver.get("https://investor.nvidia.com/financial-info/quarterly-results/default.aspx")
