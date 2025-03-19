@@ -2,7 +2,8 @@ import openai, os, markdown, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
 from dotenv import load_dotenv
-from features.pinecone.chunk_strategy import markdown_chunking, semantic_chunking
+from features.pinecone.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 load_dotenv()
 
 # Initialize Pinecone
@@ -111,17 +112,24 @@ def main():
     # files = files[:1]
     print(files)
     # files = []
-    for file in files:
-        print(f"Processing file: {file}")
+    for i, file in enumerate(files):
+        print(f"Processing File {i+1}: {file}")
         content = read_markdown_file(file, s3_obj)
+        
+        print("Using markdown chunking strategy...")
         chunks = markdown_chunking(content, heading_level=2)
         print(f"Chunk size: {len(chunks)}")
-        # Create Pinecone vector store for the current file
         create_pinecone_vector_store(file, chunks, "markdown")
+        
+        print("Using semantic chunking strategy...")
         chunks = semantic_chunking(content, max_sentences=10)
         print(f"Chunk size: {len(chunks)}")
-        # Create Pinecone vector store for the current file
         create_pinecone_vector_store(file, chunks, "semantic")
+        
+        print("Using sliding window chunking strategy...")
+        chunks = sliding_window_chunking(content, chunk_size=1000, overlap=150)
+        print(f"Chunk size: {len(chunks)}")
+        create_pinecone_vector_store(file, chunks, "slidingwindow")
     # hybrid_search(parser="mistral", chunking_strategy="semantic", query="risk factors", top_k=5, year="2025", quarter=["Q1","Q4"])
     
 if __name__ == "__main__":
