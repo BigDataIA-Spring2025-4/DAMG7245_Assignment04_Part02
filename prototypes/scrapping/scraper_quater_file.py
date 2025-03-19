@@ -7,12 +7,16 @@ import time
 
 # Set up Chrome options for headless mode
 options = Options()
-options.add_argument("--headless")  
+options.add_argument("--headless")
+options.add_argument('--no-sandbox')  
 options.add_argument("--disable-dev-shm-usage") 
 options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 # Set up the WebDriver with options
-driver = webdriver.Chrome(options=options)
+driver = webdriver.Remote(
+    command_executor='http://localhost:4444/wd/hub',
+    options=options
+)
 driver.get("https://investor.nvidia.com/financial-info/quarterly-results/default.aspx")
 
 driver.implicitly_wait(10)
