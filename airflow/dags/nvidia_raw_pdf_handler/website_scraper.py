@@ -56,13 +56,13 @@ def scrape_from_nvidia_website(**kwargs):
             
             if url and url.endswith(".pdf") and ("10-K" in link_text or "10-Q" in link_text):
                 quarter = None
-                if "/q1/" in url.lower():
+                if "/q1" in url.lower():
                     quarter = "Q1"
-                elif "/q2/" in url.lower():
+                elif "/q2" in url.lower():
                     quarter = "Q2"
-                elif "/q3/" in url.lower():
+                elif "/q3" in url.lower():
                     quarter = "Q3"
-                elif "/q4/" in url.lower() or "10-K" in link_text:
+                elif "/q4" in url.lower() or "10-K" in link_text:
                     quarter = "Q4"
                 
                 ten_k_q_links.append({

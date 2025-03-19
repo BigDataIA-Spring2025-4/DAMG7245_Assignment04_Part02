@@ -35,3 +35,7 @@ htmlcov/
 *.swp
 *dump*
 .DS_Store
+
+# Airflow
+*/logs*
+*/plugins*
