@@ -6,6 +6,7 @@ load_dotenv()
 from services.s3 import S3FileManager
 # from features.pinecone.chunk_strategy import markdown_chunking, semantic_chunking
 from features.pinecone.pinecone_openai import connect_to_pinecone_index, get_embedding, hybrid_search
+from features.chromadb.chromadb_openai import get_chroma_embeddings, query_chromadb
 from openai import OpenAI
 
 class QuestionRequest(BaseModel):
@@ -43,8 +44,16 @@ def query_documents(request: QuestionRequest):
             else:
                 message = generate_pinecone_openai_message(chunks, year, quarter, query)
                 answer = generate_model_response(message)
-        elif vector_store == "pinecone":
-            pass
+                
+        elif vector_store == "chromadb":
+            chunks = generate_response_from_chroma(parser = parser, chunk_strategy = chunk_strategy, query = query, top_k=5, year = year, quarter = quarter)
+            # print(chunks)
+            if len(chunks) == 0:
+                raise HTTPException(status_code=500, detail="No relevant data found in the document")
+            else:
+                message = generate_pinecone_openai_message(chunks, year, quarter, query)
+                answer = generate_model_response(message)
+
         elif vector_store == "manual":
             pass
         return {
@@ -59,6 +68,11 @@ def query_documents(request: QuestionRequest):
 def generate_response_from_pinecone(parser, chunk_strategy, query, top_k, year, quarter ):
     response = hybrid_search(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
     return response
+
+def generate_response_from_chroma(parser, chunk_strategy, query, top_k, year, quarter ):
+    response = query_chromadb(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+    return response
+
 
 def generate_pinecone_openai_message(chunks, year, quarter, query):
     prompt = f"""
