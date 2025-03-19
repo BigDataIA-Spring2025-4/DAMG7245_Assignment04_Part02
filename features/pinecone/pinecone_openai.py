@@ -2,7 +2,7 @@ import openai, os, markdown, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
 from dotenv import load_dotenv
-from features.pinecone.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 # from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 load_dotenv()
 
