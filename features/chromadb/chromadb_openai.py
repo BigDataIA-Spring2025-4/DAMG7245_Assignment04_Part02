@@ -4,11 +4,10 @@ import chromadb.utils.embedding_functions as embedding_functions
 from chromadb.config import Settings
 
 import tempfile
-import shutil
 from dotenv import load_dotenv
 
 from chunk_strategy import markdown_chunking, semantic_chunking  # make changes
-from s3 import S3FileManager  # make changes
+from services.s3 import S3FileManager
 
 load_dotenv()
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -19,7 +18,7 @@ def read_markdown_file(file, s3_obj):
     content = s3_obj.load_s3_file_content(file)
     return content
 
-def get_embeddings(texts):
+def get_chroma_embeddings(texts):
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
                 api_key=OPENAI_API_KEY,
                 model_name="text-embedding-3-small"
@@ -47,7 +46,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
         }
     metadata = [base_metadata for _ in range(len(chunks))]
     
-    embeddings = get_embeddings(chunks)
+    embeddings = get_chroma_embeddings(chunks)
     ids = [f"{parser}_{chunk_strategy}_{identifier}_{i}" for i in range(len(chunks))]
     if parser == 'docling' and chunk_strategy == 'semantic':
         print(f"adding to collection - {parser} - {chunk_strategy}")
@@ -99,6 +98,56 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
             with open(local_path, "rb") as f:
                 s3_obj.upload_file(AWS_BUCKET_NAME, s3_key, f.read())
 
+###### For querying - Fast API  #######
+
+def download_chromadb_from_s3(s3_obj, temp_dir):
+    """Download ChromaDB files from S3 to a temporary directory"""
+    s3_prefix = "chroma_db"
+    s3_files = [f for f in s3_obj.list_files() if f.startswith(s3_prefix)]
+    
+    for s3_file in s3_files:
+        # Extract the relative path from the S3 key
+        relative_path = s3_file[len(s3_prefix):].lstrip('/')
+        local_path = os.path.join(temp_dir, relative_path)
+        
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        # Download the file from S3
+        content = s3_obj.load_s3_file_content(s3_file, decode_as_text=False)
+        with open(local_path, 'wb') as f:
+            f.write(content if isinstance(content, bytes) else content.encode('utf-8'))
+
+def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        try:
+            s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
+            download_chromadb_from_s3(s3_obj, temp_dir)
+            chroma_client = chromadb.PersistentClient(path=temp_dir)
+
+            try:
+                collection = chroma_client.get_collection(f"{parser}_{chunking_strategy}")
+            except Exception as e:
+                raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
+            
+            # Create embeddings for the query
+            query_embeddings = get_chroma_embeddings([query])
+            
+            where_filter={"quarter": quarter, "year": year}
+            # Execute the query
+            results = collection.query(
+                query_embeddings=query_embeddings,
+                n_results=top_k,
+                where=where_filter
+            )
+            
+            return results["documents"]
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error querying ChromaDB: {str(e)}")
+
+
+
 # def main():
     # with tempfile.TemporaryDirectory() as temp_dir:
     #     chroma_client = chromadb.PersistentClient(path=temp_dir)
@@ -127,6 +176,7 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
         
     #     print("ChromaDB has been uploaded to S3.")
     #     # Explicitly close the ChromaDB client
+    
 def main():
     temp_dir = tempfile.mkdtemp()
     chroma_client = chromadb.PersistentClient(path=temp_dir)
