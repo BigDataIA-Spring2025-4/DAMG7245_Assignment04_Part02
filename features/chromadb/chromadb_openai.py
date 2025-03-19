@@ -7,7 +7,7 @@ from fastapi import HTTPException
 import tempfile
 from dotenv import load_dotenv
 
-from chunk_strategy import markdown_chunking, semantic_chunking  # make changes
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking  # make changes
 from services.s3 import S3FileManager
 
 load_dotenv()
