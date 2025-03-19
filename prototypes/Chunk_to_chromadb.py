@@ -103,13 +103,12 @@ def markdown_header_chunking(text: str) -> List[Dict]:
 # --------------------------
 # 3. Embedding Generation
 # --------------------------
-def generate_embeddings(texts: List[str]) -> List[List[float]]:
-    """Batch generate embeddings using OpenAI API"""
-    response = openai_client.embeddings.create(
-        input=texts,
-        model=EMBEDDING_MODEL
-    )
-    return [item.embedding for item in response.data]
+def generate_embeddings(texts):
+    openai_ef = embedding_functions.OpenAIEmbeddingFunction(
+                api_key=OPENAI_API_KEY,
+                model_name="text-embedding-3-small"
+            )
+    return openai_ef(texts)
 
 # --------------------------
 # 4. ChromaDB Integration
@@ -176,6 +175,7 @@ def process_documents():
         
         # Store in ChromaDB
         store_in_chroma(all_chunks, base_metadata)
+
 
 if __name__ == "__main__":
     process_documents()
