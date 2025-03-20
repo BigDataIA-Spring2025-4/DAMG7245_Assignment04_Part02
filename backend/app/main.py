@@ -353,17 +353,9 @@ def query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_ob
             # Create embeddings for the query
             query_embeddings = get_chroma_embeddings([query])
             
-            # where_filter = {
-            #             "$and": [
-            #                 {"quarter": {"$eq": quarter}},
-            #                 {"year": {"$eq": year}}
-            #             ]
-            #         }
-            # Execute the query
             results = collection.query(
                 query_embeddings=query_embeddings,
                 n_results=top_k
-                # where=where_filter
             )
             
             return results["documents"]
