@@ -14,8 +14,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def connect_to_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)
-    # print(pc.list_indexes())
-    # if PINECONE_INDEX not in pc.list_indexes():
     if not pc.has_index(PINECONE_INDEX):
         pc.create_index(
             name=PINECONE_INDEX,
@@ -77,12 +75,10 @@ def create_pinecone_vector_store(file, chunks, chunk_strategy):
 def upsert_vectors(index, vectors, parser, chunk_strategy):
     index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
 
-def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", quarter = ["Q4"]):
+def query_pinecone(parser, chunking_strategy, query, top_k=20, year = "2025", quarter = ["Q4"]):
     # Search the dense index and rerank the results
     index = connect_to_pinecone_index()
-    
     dense_vector = get_embedding(query)
-    
     results = index.query(
         namespace=f"{parser}_{chunking_strategy}",
         vector=dense_vector,  # Dense vector embedding
@@ -93,9 +89,6 @@ def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", qua
         top_k=top_k,
         include_metadata=True,  # Include chunk text
     )
-    
-    # print(results)
-    # Print the retrieved documents
     responses = []
     for match in results["matches"]:
         print(f"ID: {match['id']}, Score: {match['score']}")

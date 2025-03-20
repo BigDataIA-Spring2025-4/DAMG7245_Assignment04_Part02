@@ -1,7 +1,9 @@
+tempfile
 pydantic
 fastapi
 uvicorn
 requests
+asyncio
 python-dotenv
 boto3
 pandas
@@ -12,3 +14,4 @@ webdriver-manager
 selenium
 pinecone
 chromadb
+scikit-learn

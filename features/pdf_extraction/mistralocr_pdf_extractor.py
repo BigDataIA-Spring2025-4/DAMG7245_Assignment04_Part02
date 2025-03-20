@@ -46,6 +46,8 @@ def pdf_mistralocr_converter(pdf_stream: io.BytesIO, base_path, s3_obj):
     # Upload the markdown file to S3   
     s3_obj.upload_file(s3_obj.bucket_name, md_file_name ,final_md_content.encode('utf-8'))
     
+    return md_file_name, final_md_content
+    
 
 def replace_images_in_markdown(markdown_str: str, images_dict: dict, s3_obj, base_path) -> str:
     for img_name, base64_str in images_dict.items():
@@ -94,7 +96,7 @@ def main():
         pdf_file = s3_obj.load_s3_pdf(file)
         pdf_bytes = io.BytesIO(pdf_file)
         output_path = f"{s3_obj.base_path}/mistral/{file.split('/')[-1].split('.')[0]}"
-        pdf_mistralocr_converter(pdf_bytes, output_path, s3_obj)
+        file_name, markdown_content = pdf_mistralocr_converter(pdf_bytes, output_path, s3_obj)
 
 if __name__ == "__main__":
     main()
