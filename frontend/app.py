@@ -8,8 +8,8 @@ load_dotenv()
 API_URL=os.getenv("API_URL")
 
 pdfparser = {
-        "Docling": "docling",
-        "Mistral": "mistral"
+        "Mistral": "mistral",
+        "Docling": "docling"
     }
 
 chunking = {
@@ -25,6 +25,8 @@ vectorstores = {
 
 if 'messages' not in st.session_state:
     st.session_state.messages = []
+if "file_upload" not in st.session_state:
+    st.session_state.file_upload = None
 
 def trigger_airflow_dag():
     st.write("Now triggering airflow dag...")
@@ -40,7 +42,58 @@ def main():
         if airflow:
             trigger_airflow_dag()
     elif task == "Query Document":
-        document_parser_page()
+        # document_parser_page()
+        # Set the title of the app
+        st.header("📃 Select PDF for Parsing")
+                    
+        if "file_upload" not in st.session_state:
+            st.session_state.file_upload = None
+
+        st.session_state.file_upload = st.sidebar.file_uploader("Choose a PDF File", type="pdf", accept_multiple_files=False)    
+        select_parser = st.sidebar.selectbox('Parser:', list(pdfparser.keys()))
+        parser = pdfparser[select_parser]        
+        select_chunk_strategy = st.sidebar.selectbox('Select Chunking Strategy:', list(chunking.keys()))
+        chunk_strategy = chunking[select_chunk_strategy]
+        select_vector_store = st.sidebar.selectbox('Select Vector Store:', list(vectorstores.keys()))
+        vector_store = vectorstores[select_vector_store]
+        st.sidebar.text("Enter query here:")
+        query = st.sidebar.chat_input(placeholder = "Write your query here...")
+        if query:
+        # Define what happens on each page
+            if st.session_state.file_upload:
+                st.success(f"File '{st.session_state.file_upload.name}' uploaded successfully!")
+                file_name, markdown_content = convert_PDF_to_markdown(st.session_state.file_upload, parser)
+                if not markdown_content == "":
+                        st.session_state.messages.append({"role": "user", "content": query})
+                        with st.chat_message("user"):
+                            st.markdown(query)
+                        with st.chat_message("assistant"):
+                            with st.spinner("Thinking..."):
+                                try:
+                                    response = requests.post(
+                                        f"{API_URL}/query_document",
+                                        json={
+                                            "parser": parser,
+                                            "chunk_strategy": chunk_strategy,
+                                            "vector_store": vector_store,
+                                            "file_name": file_name,
+                                            "markdown_content": markdown_content,
+                                            "query": query,
+                                        }
+                                    )
+                                    if response.status_code == 200:
+                                        answer = response.json()["answer"]
+                                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                                        st.markdown(answer)
+                                    else:
+                                        error_message = f"Error: {response.text}"
+                                        st.error(error_message)
+                                        st.session_state.messages.append({"role": "assistant", "content": error_message})
+                                except Exception as e:
+                                    error_message = f"Error: {str(e)}"
+                                    st.session_state.messages.append({"role": "assistant", "content": error_message})
+            else:
+                st.info("Please upload a PDF file.")
     elif task == "Query Financial Reports":
         year = str(st.sidebar.selectbox('Year', range(2025,2020,-1)))
         quarter = st.sidebar.multiselect('Quarter:', ["Q1", "Q2", "Q3", "Q4"], default=['Q1'])
@@ -61,7 +114,7 @@ def main():
                 with st.chat_message("assistant"):
                     with st.spinner("Thinking..."):
                         try:
-                            time.sleep(2)
+                            # time.sleep(2)
                             response = requests.post(
                                 f"{API_URL}/query_nvdia_documents",
                                 json={
@@ -88,23 +141,7 @@ def main():
                 # st.write(st.session_state.messages)
             else:
                 st.info("Please select all the required details")
-        
-def document_parser_page():
-    # Set the title of the app
-    st.header("📃 Select PDF for Parsing")
-                  
-    file_upload = st.sidebar.file_uploader("Choose a PDF File", type="pdf", accept_multiple_files=False)    
-    select_parser = st.sidebar.selectbox('Parser:', list(pdfparser.keys()))
-    parser = pdfparser[select_parser]        
-    convert = st.sidebar.button("Process", use_container_width=True)
-    # Define what happens on each page
-    if convert:
-        if file_upload:
-            st.success(f"File '{file_upload.name}' uploaded successfully!")
-            convert_PDF_to_markdown(file_upload, parser)
-        else:
-            st.info("Please upload a PDF file.")
-    
+            
 def convert_PDF_to_markdown(file_upload, parser):    
     progress_bar = st.progress(0)
     progress_text = st.empty()
@@ -129,17 +166,50 @@ def convert_PDF_to_markdown(file_upload, parser):
                 data = response.json()
                 progress_text.text("Finalizing output...")
                 # st.subheader(data["message"])
-                # st.markdown(data["scraped_content"], unsafe_allow_html=True)
                 st.success("Document Processed Successfully!")
+                progress_bar.progress(100)
+                progress_text.empty()
+                progress_bar.empty()    
+                return data["file_name"], data["scraped_content"]
             else:
                 st.error("Server not responding.")
         except:
             st.error("An error occurred while processing the PDF.")
     
-    progress_bar.progress(100)
-    progress_text.empty()
-    progress_bar.empty()        
 
+def generate_query_response(markdown_content, query, parser, chunk_strategy, vector_store):
+    # st.session_state.messages.clear()
+    st.session_state.messages.append({"role": "user", "content": query})
+    with st.chat_message("user"):
+        st.markdown(query)
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                # time.sleep(2)
+                response = requests.post(
+                    f"{API_URL}/query_document",
+                    json={
+                        "parser": parser,
+                        "chunk_strategy": chunk_strategy,
+                        "vector_store": vector_store,
+                        "markdown_content": markdown_content,
+                        "query": query,
+                    }
+                )
+                if response.status_code == 200:
+                    answer = response.json()["answer"]
+                    st.session_state.messages.append({"role": "assistant", "content": answer})
+                    # st.markdown(answer)
+                    return answer
+                else:
+                    error_message = f"Error: {response.text}"
+                    st.error(error_message)
+                    st.session_state.messages.append({"role": "assistant", "content": error_message})
+            except Exception as e:
+                error_message = f"Error: {str(e)}"
+                # st.error(error_message)
+                st.session_state.messages.append({"role": "assistant", "content": error_message})
+    
 if __name__ == "__main__":
 # Set page configuration
     st.set_page_config(
