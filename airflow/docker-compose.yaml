@@ -44,8 +44,8 @@ x-airflow-common:
   &airflow-common
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
-  # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.5.1}
+  # and uncomment the "build" line below, Then run docker-compose build to build the images.
+  image: "apache/airflow:2.5.1"
   # build: .
   environment:
     &airflow-common-env
@@ -59,7 +59,7 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-selenium}
+    _PIP_ADDITIONAL_REQUIREMENTS: "selenium"
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -125,6 +125,8 @@ services:
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
+      selenium-chrome:
+        condition: service_started
       airflow-init:
         condition: service_completed_successfully
 
@@ -140,12 +142,12 @@ services:
       retries: 5
     environment:
       <<: *airflow-common-env
-      # Required to handle warm shutdown of the celery workers properly
-      # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
       DUMB_INIT_SETSID: "0"
     restart: always
     depends_on:
       <<: *airflow-common-depends-on
+      selenium-chrome:
+        condition: service_started  # Ensure Selenium starts first
       airflow-init:
         condition: service_completed_successfully
 
@@ -274,16 +276,13 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-  selenium:
-    image: selenium/standalone-chrome
+
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    shm_size: 2gb  # Prevent Chrome crashes due to shared memory limits
     ports:
       - "4444:4444"
-    networks:
-      - airflow
-
-networks:
-  airflow:
-    name: airflow
-
+    restart: always
+  
 volumes:
   postgres-db-volume:

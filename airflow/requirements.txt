@@ -1,0 +1,14 @@
+pydantic
+fastapi
+uvicorn
+requests
+python-dotenv
+boto3
+pandas
+numpy
+docling
+mistralai
+webdriver-manager
+selenium
+pinecone
+chromadb
