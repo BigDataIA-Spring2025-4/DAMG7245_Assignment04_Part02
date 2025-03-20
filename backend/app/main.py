@@ -91,7 +91,13 @@ async def query_document(request: DocumentQueryRequest):
                 message = generate_openai_message_document(query, result_chunks)
                 answer = generate_model_response(message)
         elif vector_store == "chromadb":
-            await create_chromadb_vector_store(file_name, chunks, chunk_strategy, parser)
+            s3_obj = await create_chromadb_vector_store(file_name, chunks, chunk_strategy, parser)
+            result_chunks = generate_response_doc_chroma(file_name, parser, chunk_strategy, query, top_k, s3_obj)
+            # query_chromadb_doc(file_name, parser, chunk_strategy, query, top_k, s3_obj)
+            message = generate_openai_message_document(query, result_chunks)
+            print(message)
+            answer = generate_model_response(message)
+            print(answer)
         return {
             # "answer": parser + chunk_strategy + vector_store + query + file_name + str(len(chunks)),
             "answer": answer
@@ -161,8 +167,8 @@ def generate_response_from_chroma(parser, chunk_strategy, query, top_k, year, qu
     response = query_chromadb(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
     return response
 
-def generate_response_doc_chroma(parser, chunk_strategy, query, top_k, year, quarter ):
-    response = query_chromadb_doc(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+def generate_response_doc_chroma(file_name, parser, chunking_strategy, query, top_k, s3_obj):
+    response = query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_obj)
     return response
 
 def generate_openai_message_document(query, chunks):
@@ -299,6 +305,7 @@ async def create_chromadb_vector_store(file, chunks, chunk_strategy, parser):
     # Upload the entire ChromaDB directory to S3
     upload_directory_to_s3(temp_dir, s3_obj, "chroma_db")
     print("ChromaDB has been uploaded to S3.")
+    return s3_obj
 
 def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
     """Upload a directory and its contents to S3"""
@@ -330,32 +337,33 @@ def download_chromadb_from_s3(s3_obj, temp_dir):
         with open(local_path, 'wb') as f:
             f.write(content if isinstance(content, bytes) else content.encode('utf-8'))
 
-def query_chromadb_doc(parser, chunking_strategy, query, top_k, year, quarter):
+def query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_obj):
     with tempfile.TemporaryDirectory() as temp_dir:
         try:
-            s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
+            # s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
             download_chromadb_from_s3(s3_obj, temp_dir)
             chroma_client = chromadb.PersistentClient(path=temp_dir)
+            file_name = file_name.split('/')[2]
 
             try:
-                collection = chroma_client.get_collection(f"{parser}_{chunking_strategy}")
+                collection = chroma_client.get_collection(f"{file_name}_{parser}_{chunking_strategy}")
             except Exception as e:
                 raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
             
             # Create embeddings for the query
             query_embeddings = get_chroma_embeddings([query])
             
-            where_filter = {
-                        "$and": [
-                            {"quarter": {"$eq": quarter}},
-                            {"year": {"$eq": year}}
-                        ]
-                    }
+            # where_filter = {
+            #             "$and": [
+            #                 {"quarter": {"$eq": quarter}},
+            #                 {"year": {"$eq": year}}
+            #             ]
+            #         }
             # Execute the query
             results = collection.query(
                 query_embeddings=query_embeddings,
-                n_results=top_k,
-                where=where_filter
+                n_results=top_k
+                # where=where_filter
             )
             
             return results["documents"]
