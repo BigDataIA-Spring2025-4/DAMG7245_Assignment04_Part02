@@ -1,4 +1,4 @@
-import os, time, base64, asyncio
+import os, time, base64, asyncio, chromadb, tempfile
 from io import BytesIO
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from services.s3 import S3FileManager
 from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
-from features.pinecone.pinecone_openai import connect_to_pinecone_index, get_embedding, hybrid_search
+from features.pinecone.pinecone_openai import connect_to_pinecone_index, get_embedding, query_pinecone
 from features.chromadb.chromadb_openai import get_chroma_embeddings, query_chromadb
 from openai import OpenAI
 from features.pdf_extraction.docling_pdf_extractor import pdf_docling_converter
@@ -90,6 +90,14 @@ async def query_document(request: DocumentQueryRequest):
                 # answer = generate_model_response(message)
                 message = generate_openai_message_document(query, result_chunks)
                 answer = generate_model_response(message)
+        elif vector_store == "chromadb":
+            s3_obj = await create_chromadb_vector_store(file_name, chunks, chunk_strategy, parser)
+            result_chunks = generate_response_doc_chroma(file_name, parser, chunk_strategy, query, top_k, s3_obj)
+            # query_chromadb_doc(file_name, parser, chunk_strategy, query, top_k, s3_obj)
+            message = generate_openai_message_document(query, result_chunks)
+            print(message)
+            answer = generate_model_response(message)
+            print(answer)
         return {
             # "answer": parser + chunk_strategy + vector_store + query + file_name + str(len(chunks)),
             "answer": answer
@@ -148,15 +156,19 @@ def generate_chunks(markdown_content, chunk_strategy):
     
     
 def generate_response_from_pinecone(parser, chunk_strategy, query, top_k, year, quarter ):
-    response = hybrid_search(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+    response = query_pinecone(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
     return response
 
 def generate_response_doc_pinecone(file, parser, chunking_strategy, query, top_k=10):
-    response = hybrid_search_doc(file, parser, chunking_strategy, query, top_k=top_k)
+    response = query_pinecone_doc(file, parser, chunking_strategy, query, top_k=top_k)
     return response
 
 def generate_response_from_chroma(parser, chunk_strategy, query, top_k, year, quarter ):
     response = query_chromadb(parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+    return response
+
+def generate_response_doc_chroma(file_name, parser, chunking_strategy, query, top_k, s3_obj):
+    response = query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_obj)
     return response
 
 def generate_openai_message_document(query, chunks):
@@ -240,7 +252,7 @@ async def create_pinecone_vector_store(file, chunks, chunk_strategy, parser):
 def upsert_vectors(index, vectors, namespace):
     index.upsert(vectors=vectors, namespace=namespace)
 
-def hybrid_search_doc(file, parser, chunking_strategy, query, top_k=10):
+def query_pinecone_doc(file, parser, chunking_strategy, query, top_k=10):
     # Search the dense index and rerank the results
     index = connect_to_pinecone_index()
     dense_vector = get_embedding(query)
@@ -264,6 +276,100 @@ def hybrid_search_doc(file, parser, chunking_strategy, query, top_k=10):
         responses.append(match['metadata']['text'])
         print("=================================================================================")
     return responses
+
+async def create_chromadb_vector_store(file, chunks, chunk_strategy, parser):
+    temp_dir = tempfile.mkdtemp()
+    chroma_client = chromadb.PersistentClient(path=temp_dir)
+    print(file)
+    file_name = file.split('/')[2]
+    print(file_name)
+    base_path = "/".join(file.split('/')[:-1])
+    print(base_path)
+    s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+    # create_chromadb_vector_store(chroma_client, file, chunks_mark, chunk_strategy)
+    collection_file = chroma_client.get_or_create_collection(name=f"{file_name}_{parser}_{chunk_strategy}")
+    base_metadata = {
+        "file": file_name
+    }
+    metadata = [base_metadata for _ in range(len(chunks))]
+    
+    embeddings = get_chroma_embeddings(chunks)
+    ids = [f"{file_name}_{parser}_{chunk_strategy}_{i}" for i in range(len(chunks))]
+    
+    collection_file.add(
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=metadata,
+        documents=chunks
+    )
+    # Upload the entire ChromaDB directory to S3
+    upload_directory_to_s3(temp_dir, s3_obj, "chroma_db")
+    print("ChromaDB has been uploaded to S3.")
+    return s3_obj
+
+def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
+    """Upload a directory and its contents to S3"""
+    for root, dirs, files in os.walk(local_dir):
+        for file in files:
+            local_path = os.path.join(root, file)
+            # Create the S3 key by replacing the local directory path with the S3 prefix
+            relative_path = os.path.relpath(local_path, local_dir)
+            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path).replace("\\", "/")}"
+            
+            with open(local_path, "rb") as f:
+                s3_obj.upload_file(AWS_BUCKET_NAME, s3_key, f.read())
+
+def download_chromadb_from_s3(s3_obj, temp_dir):
+    """Download ChromaDB files from S3 to a temporary directory"""
+    s3_prefix = f"{s3_obj.base_path}/chroma_db"
+    s3_files = [f for f in s3_obj.list_files() if f.startswith(s3_prefix)]
+    
+    for s3_file in s3_files:
+        # Extract the relative path from the S3 key
+        relative_path = s3_file[len(s3_prefix):].lstrip('/')
+        local_path = os.path.join(temp_dir, relative_path)
+        
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        # Download the file from S3
+        content = s3_obj.load_s3_pdf(s3_file)
+        with open(local_path, 'wb') as f:
+            f.write(content if isinstance(content, bytes) else content.encode('utf-8'))
+
+def query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_obj):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        try:
+            # s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
+            download_chromadb_from_s3(s3_obj, temp_dir)
+            chroma_client = chromadb.PersistentClient(path=temp_dir)
+            file_name = file_name.split('/')[2]
+
+            try:
+                collection = chroma_client.get_collection(f"{file_name}_{parser}_{chunking_strategy}")
+            except Exception as e:
+                raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
+            
+            # Create embeddings for the query
+            query_embeddings = get_chroma_embeddings([query])
+            
+            # where_filter = {
+            #             "$and": [
+            #                 {"quarter": {"$eq": quarter}},
+            #                 {"year": {"$eq": year}}
+            #             ]
+            #         }
+            # Execute the query
+            results = collection.query(
+                query_embeddings=query_embeddings,
+                n_results=top_k
+                # where=where_filter
+            )
+            
+            return results["documents"]
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error querying ChromaDB: {str(e)}")
 
 def generate_model_response(message):
     try:
