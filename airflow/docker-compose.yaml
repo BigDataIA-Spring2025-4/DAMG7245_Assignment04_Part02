@@ -45,7 +45,7 @@ x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run docker-compose build to build the images.
-  image: apache/airflow:2.7.0-python3.9
+  image: apache/airflow:2.10.5-python3.12
   # build: .
   environment:
     &airflow-common-env
@@ -60,7 +60,7 @@ x-airflow-common:
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     
-    _PIP_ADDITIONAL_REQUIREMENTS: "selenium chromadb pinecone openai tiktoken boto3 spacy scikit-learn"
+    _PIP_ADDITIONAL_REQUIREMENTS: "selenium chromadb pinecone openai tiktoken boto3 spacy scikit-learn numpy<2,>=1.26.0"
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -284,6 +284,8 @@ services:
     ports:
       - "4444:4444"
     restart: always
-  
+
+  airflow:
+    image: apache/airflow:2.10.5-python3.12 
 volumes:
   postgres-db-volume:
