@@ -217,7 +217,7 @@ def main():
         # For Sliding chunking strategy
         chunks_sliding = sliding_window_chunking(content)
         print(f"Chunk size Sliding: {len(chunks_sem)}")
-        create_chromadb_vector_store(chroma_client, file, chunks_sem, "Sliding")
+        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "Sliding")
 
     print(files)
 
