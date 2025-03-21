@@ -138,7 +138,7 @@ def download_chromadb_from_s3(s3_obj, temp_dir):
 def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
     with tempfile.TemporaryDirectory() as temp_dir:
         try:
-            s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
+            s3_obj = S3FileManager(AWS_BUCKET_NAME, "nvdia/")
             download_chromadb_from_s3(s3_obj, temp_dir)
             chroma_client = chromadb.PersistentClient(path=temp_dir)
             try:
