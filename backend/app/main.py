@@ -337,7 +337,7 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
             local_path = os.path.join(root, file)
             # Create the S3 key by replacing the local directory path with the S3 prefix
             relative_path = os.path.relpath(local_path, local_dir)
-            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path).replace("\\", "/")}"
+            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path)}".replace("\\", "/")
             
             with open(local_path, "rb") as f:
                 s3_obj.upload_file(AWS_BUCKET_NAME, s3_key, f.read())
