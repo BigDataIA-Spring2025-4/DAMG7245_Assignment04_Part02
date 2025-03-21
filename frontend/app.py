@@ -33,7 +33,7 @@ if "file_upload" not in st.session_state:
 def trigger_airflow_dag():
     st.write("Now triggering airflow dag...")
     year = st.selectbox("Select Year", range(2024, 2020,-1))
-    trigger = st.button("Trigger Airflow DAG", use_container_width=True)
+    trigger = st.button("Trigger Airflow DAG", use_container_width=True, icon = "🚀")
     if trigger:
         # Payload for triggering the DAG
         payload = {
@@ -58,9 +58,7 @@ def main():
     st.sidebar.header("Main Menu") 
     task = st.sidebar.selectbox("Select Task", ["Trigger Airflow", "Query Financial Reports", "Query Document"])
     if task == "Trigger Airflow":
-        airflow = st.sidebar.button("Trigger Airflow DAG", use_container_width=True, icon = "🚀")
-        if airflow:
-            trigger_airflow_dag()
+        trigger_airflow_dag()
     elif task == "Query Document":
         # document_parser_page()
         # Set the title of the app
