@@ -1,4 +1,4 @@
-import openai, os, markdown, re
+import openai, os, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
 from dotenv import load_dotenv
