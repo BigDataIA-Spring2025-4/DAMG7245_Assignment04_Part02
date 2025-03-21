@@ -18,7 +18,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id='nvidia_create_vector_databases',
+    dag_id='nvidia_create_vector_spaces',
     default_args=default_args,
     tags=['nvidia'],
     description='Load the prased NVIDIA financial documents into 3 vector stores - chromadb,pinecone and manual implementation',

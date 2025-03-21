@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL=os.getenv("API_URL")
-AIRFLOW_API_URL = "http://35.209.49.151:8080"
+AIRFLOW_API_URL = "http://localhost:8080"
 
 pdfparser = {
         "Mistral": "mistral",
@@ -38,7 +38,7 @@ def trigger_airflow_dag():
         # Payload for triggering the DAG
         payload = {
             "conf": {
-                "year": year
+                "year": str(year)
             }
         }
         # Trigger the DAG via Airflow REST API
