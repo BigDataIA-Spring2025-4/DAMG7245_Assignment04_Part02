@@ -4,11 +4,15 @@ from services.s3 import S3FileManager
 from vectordatabases.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from airflow.models import Variable
 
+import dotenv
+
+dotenv.load_dotenv()
+
 # Initialize Pinecone
 PINECONE_API_KEY = Variable.get("PINECONE_API_KEY")
 PINECONE_INDEX = Variable.get("PINECONE_INDEX")
 AWS_BUCKET_NAME = Variable.get("AWS_BUCKET_NAME")
-OPENAI_API_KEY = Variable.get("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def connect_to_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)

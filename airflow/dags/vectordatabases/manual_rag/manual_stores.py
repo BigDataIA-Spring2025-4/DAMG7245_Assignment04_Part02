@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pickle
-
 from sklearn.metrics.pairwise import cosine_similarity
 import openai
 
@@ -124,6 +123,7 @@ def get_manual_vector_store(file, chunks, chunk_strategy):
     return vectors
 
 def create_manual_vector_store():
+    print("helloooo")
     base_path = "nvdia/"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     all_vectors = load_from_s3_pickle(s3_obj)
