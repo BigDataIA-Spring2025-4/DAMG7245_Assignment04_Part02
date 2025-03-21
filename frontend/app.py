@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL=os.getenv("API_URL")
-AIRFLOW_API_URL = "http://35.209.49.151:8080"
+AIRFLOW_API_URL =os.getenv("AIRFLOW_API_URL")
 
 pdfparser = {
         "Mistral": "mistral",
