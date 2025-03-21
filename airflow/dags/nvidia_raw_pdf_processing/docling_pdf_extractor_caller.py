@@ -35,6 +35,7 @@ def pdf_docling_converter(ti: TaskInstance, **kwargs):
             if response.status_code == 200:
                 print(f"Docling processing for {filename} tiggered...!")
                 data = response.json()
+                print(filename)
                 file_name = "/".join(filename.split('/')[:-1]) + "/docling/extracted_data.md"
                 print(file_name)
                 scraped_content = data["scraped_content"]
