@@ -192,6 +192,28 @@ python -m venv venvsource venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### 3. AWS S3 Setup
+
+**Step 1: Create an AWS Account**
+
+- Go to [AWS Signup](https://aws.amazon.com/) and click **Create an AWS Account**.
+- Follow the instructions to enter your email, password, and billing details.
+- Verify your identity and choose a support plan.
+
+**Step 2: Log in to AWS Management Console**
+
+- Visit [AWS Console](https://aws.amazon.com/console/) and log in with your credentials.
+- Search for **S3** in the AWS services search bar and open it.
+
+**Step 3: Create an S3 Bucket**
+
+- Click **Create bucket**.
+- Enter a unique **Bucket name**.
+- Select a region closest to your users.
+- Configure settings as needed (e.g., versioning, encryption).
+- Click **Create bucket** to finalize.
+
+
 
 
 
