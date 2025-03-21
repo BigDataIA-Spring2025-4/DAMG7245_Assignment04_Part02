@@ -129,9 +129,9 @@ def create_manual_vector_store(year, **kwargs):
     print("helloooo")
     base_path = f"nvidia/{year}"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
-    all_vectors = load_from_s3_pickle(s3_obj)
+    # all_vectors = load_from_s3_pickle(s3_obj)
     print("updated all vectors")
-    # all_vectors=[]
+    all_vectors=[]
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     print(files)
     # all_vectors = []
