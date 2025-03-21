@@ -38,7 +38,7 @@ def trigger_airflow_dag():
         # Payload for triggering the DAG
         payload = {
             "conf": {
-                "year": year
+                "year": str(year)
             }
         }
         # Trigger the DAG via Airflow REST API
