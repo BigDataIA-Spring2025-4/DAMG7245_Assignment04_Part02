@@ -65,7 +65,7 @@ Google Codelab: [Codelab Link](https://codelabs-preview.appspot.com/?file_id=1wN
 
 Google Docs: [Docs Links](https://docs.google.com/document/d/1wNuNnA158jJYUCYnTUqUbAgyzFWdDzevLy3CQaNrNlk/edit?tab=t.0)
 
-Video Walkthrough:
+Video Walkthrough: [Video Walkthrough](https://northeastern-my.sharepoint.com/:v:/g/personal/gangurde_a_northeastern_edu/EYuha5f4oM1Lt9H_C1HOCTIBOt2lH2HoCOn6xferBmMkGQ?e=8dO30A)
 
 ## Technologies Used
 
