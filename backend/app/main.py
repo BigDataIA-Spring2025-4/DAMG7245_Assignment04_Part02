@@ -301,32 +301,32 @@ def query_pinecone_doc(file, parser, chunking_strategy, query, top_k=10):
     return responses
 
 async def create_chromadb_vector_store(file, chunks, chunk_strategy, parser):
-    temp_dir = tempfile.mkdtemp()
-    chroma_client = chromadb.PersistentClient(path=temp_dir)
-    print(file)
-    file_name = file.split('/')[2]
-    print(file_name)
-    base_path = "/".join(file.split('/')[:-1])
-    print(base_path)
-    s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
-    # create_chromadb_vector_store(chroma_client, file, chunks_mark, chunk_strategy)
-    collection_file = chroma_client.get_or_create_collection(name=f"{file_name}_{parser}_{chunk_strategy}")
-    base_metadata = {
-        "file": file_name
-    }
-    metadata = [base_metadata for _ in range(len(chunks))]
-    
-    embeddings = get_chroma_embeddings(chunks)
-    ids = [f"{file_name}_{parser}_{chunk_strategy}_{i}" for i in range(len(chunks))]
-    
-    collection_file.add(
-        ids=ids,
-        embeddings=embeddings,
-        metadatas=metadata,
-        documents=chunks
-    )
-    # Upload the entire ChromaDB directory to S3
-    upload_directory_to_s3(temp_dir, s3_obj, "chroma_db")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        chroma_client = chromadb.PersistentClient(path=temp_dir)
+        print(file)
+        file_name = file.split('/')[2]
+        print(file_name)
+        base_path = "/".join(file.split('/')[:-1])
+        print(base_path)
+        s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+        # create_chromadb_vector_store(chroma_client, file, chunks_mark, chunk_strategy)
+        collection_file = chroma_client.get_or_create_collection(name=f"{file_name}_{parser}_{chunk_strategy}")
+        base_metadata = {
+            "file": file_name
+        }
+        metadata = [base_metadata for _ in range(len(chunks))]
+        
+        embeddings = get_chroma_embeddings(chunks)
+        ids = [f"{file_name}_{parser}_{chunk_strategy}_{i}" for i in range(len(chunks))]
+        
+        collection_file.add(
+            ids=ids,
+            embeddings=embeddings,
+            metadatas=metadata,
+            documents=chunks
+        )
+        # Upload the entire ChromaDB directory to S3
+        upload_directory_to_s3(temp_dir, s3_obj, "chroma_db")
     print("ChromaDB has been uploaded to S3.")
     return s3_obj
 

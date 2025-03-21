@@ -8,7 +8,7 @@ import openai
 from dotenv import load_dotenv
 
 from services.s3 import S3FileManager
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, split_chunk
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 
 
 load_dotenv()
@@ -58,6 +58,7 @@ def get_manual_vector_doc(file, chunks, chunk_strategy, parser):
         })
     return vectors
 
+
 def create_manual_vector_store_doc(file, chunks, chunk_strategy, parser):
     file_name = file.split('/')[2]
     base_path = "/".join(file.split('/')[:-1])
@@ -79,9 +80,9 @@ def create_manual_vector_store_doc(file, chunks, chunk_strategy, parser):
     # vector = get_manual_vector_doc(file, chunks, "semantic", parser)
     # all_vectors.extend(vector)
 
-    # chunks = split_chunk(content)
-    # print(f"split Chunk size: {len(chunks)}")
-    # vector = get_manual_vector_doc(file, chunks, "split", parser)
+    # chunks = sliding_window_chunking(content)
+    # print(f"sliding Chunk size: {len(chunks)}")
+    # vector = get_manual_vector_doc(file, chunks, "sliding", parser)
     # all_vectors.extend(vector)
 
     # save_to_s3_pickle(s3_obj, all_vectors)
@@ -165,12 +166,12 @@ def create_manual_vector_store():
 
         chunks = semantic_chunking(content)
         print(f"semantic Chunk size: {len(chunks)}")
-        vector = get_manual_vector_store(file, chunks, "markdown")
+        vector = get_manual_vector_store(file, chunks, "semantic")
         all_vectors.extend(vector)
 
-        chunks = split_chunk(content)
-        print(f"split Chunk size: {len(chunks)}")
-        vector = get_manual_vector_store(file, chunks, "markdown")
+        chunks = sliding_window_chunking(content)
+        print(f"sliding Chunk size: {len(chunks)}")
+        vector = get_manual_vector_store(file, chunks, "sliding")
         all_vectors.extend(vector)
 
     save_to_s3_pickle(s3_obj, all_vectors)
