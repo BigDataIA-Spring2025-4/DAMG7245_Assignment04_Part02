@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL=os.getenv("API_URL")
-AIRFLOW_API_URL = "http://35.209.49.151:8080"
+AIRFLOW_API_URL = "http://localhost:8080"
 
 pdfparser = {
         "Mistral": "mistral",
@@ -32,13 +32,13 @@ if "file_upload" not in st.session_state:
 
 def trigger_airflow_dag():
     st.write("Now triggering airflow dag...")
-    year = st.selectbox("Select Year", range(2024, 2020,-1))
+    year = st.selectbox("Select Year", range(2025, 2020,-1))
     trigger = st.button("Trigger Airflow DAG", use_container_width=True, icon = "🚀")
     if trigger:
         # Payload for triggering the DAG
         payload = {
             "conf": {
-                "year": year
+                "year": str(year)
             }
         }
         # Trigger the DAG via Airflow REST API

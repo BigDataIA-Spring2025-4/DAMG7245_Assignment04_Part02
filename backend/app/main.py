@@ -148,7 +148,7 @@ def query_nvdia_documents(request: NVDIARequest):
                 answer = generate_model_response(message)
 
         elif vector_store == "manual":
-            base_path = "nvdia/"
+            base_path = "nvidia/"
             s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
 
             chunks = generate_response_manual(s3_obj, parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)

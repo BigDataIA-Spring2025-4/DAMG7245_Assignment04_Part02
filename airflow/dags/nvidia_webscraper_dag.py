@@ -2,6 +2,7 @@ from datetime import datetime
 from airflow.models import Variable
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.task_group import TaskGroup
 
 from nvidia_raw_pdf_handler.links_to_s3_push import upload_pdf_to_s3
@@ -19,7 +20,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id='nvidia_financial_docs_scraper_and_loader_v2',
+    dag_id='nvidia_financial_docs_scraper_and_loader',
     default_args=default_args,
     tags=['nvidia'],
     description='Extract NVIDIA financial documents for one year and all 4-Qs, transform using Docling or Mistral, and load into S3',
@@ -67,9 +68,18 @@ with DAG(
                 op_kwargs={'quarter': i, 'source_task_id': f'Upload_to_S3_Q{i}'},
             )
 
-    # **Correctly linking tasks**
-    scrape >> list(upload_tasks.values())  # Scraping triggers all upload tasks
+    # Task to trigger another DAG after all processing tasks are complete
+    trigger_verctor_db_push = TriggerDagRunOperator(
+        task_id="trigger_vector_db_push",
+        trigger_dag_id="nvidia_create_vector_spaces",  
+        wait_for_completion=False,
+        conf={"year": "{{ dag_run.conf.get('year', '2025') }}"}
+    )
+
+    scrape >> list(upload_tasks.values()) 
 
     for i in range(4, 0, -1):  
         upload_tasks[i] >> docling_tasks[i]  # Each upload task triggers its Docling task
         upload_tasks[i] >> mistral_tasks[i]  # Each upload task triggers its Mistral task
+
+    list(docling_tasks.values()) + list(mistral_tasks.values()) >> trigger_verctor_db_push

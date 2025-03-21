@@ -7,15 +7,18 @@ from fastapi import HTTPException
 import tempfile
 from dotenv import load_dotenv
 
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+from vectordatabases.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from services.s3 import S3FileManager
-# from s3 import S3FileManager
-# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+
+from airflow.models import Variable
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+
 
 load_dotenv()
-AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
+AWS_BUCKET_NAME = Variable.get("AWS_BUCKET_NAME")
+OPENAI_API_KEY = Variable.get("OPENAI_API_KEY")
 
 def read_markdown_file(file, s3_obj):
     content = s3_obj.load_s3_file_content(file)
@@ -39,10 +42,12 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
     collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_sliding_window")
 
     file = file.split('/')
-    parser = file[1]
-    identifier = file[2]
-    year = identifier[2:6]
-    quarter = identifier[6:]
+    parser = file[-2]
+    # identifier = file[2]
+    year = file[-4]
+    quarter = file[-3]
+    identifier = f"FY{year}{quarter}"
+
 
     base_metadata = {
             "year": year,
@@ -138,7 +143,7 @@ def download_chromadb_from_s3(s3_obj, temp_dir):
 def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
     with tempfile.TemporaryDirectory() as temp_dir:
         try:
-            s3_obj = S3FileManager(AWS_BUCKET_NAME, "nvidia/")
+            s3_obj = S3FileManager(AWS_BUCKET_NAME, "nvdia/")
             download_chromadb_from_s3(s3_obj, temp_dir)
             chroma_client = chromadb.PersistentClient(path=temp_dir)
             try:
@@ -163,39 +168,10 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
             raise HTTPException(status_code=500, detail=f"Error querying ChromaDB: {str(e)}")
 
 
-# def main():
-    # with tempfile.TemporaryDirectory() as temp_dir:
-    #     chroma_client = chromadb.PersistentClient(path=temp_dir)
-    #     base_path = "nvdia/"
-    #     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
-
-    #     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
-    #     files = files[:2]  #make change here
-    #     for file in files:
-    #         content = read_markdown_file(file, s3_obj)
-
-    #         # For markdown chunking strategy
-    #         chunks_mark = markdown_chunking(content, heading_level=2)
-    #         print(f"Chunk size markdown: {len(chunks_mark)}")
-    #         create_chromadb_vector_store(chroma_client, file, chunks_mark, "markdown")
-
-    #         # For semantic chunking strategy
-    #         chunks_sem = semantic_chunking(content, max_sentences=10)
-    #         print(f"Chunk size semantic: {len(chunks_sem)}")
-    #         create_chromadb_vector_store(chroma_client, file, chunks_sem, "semantic")
-
-    #     print(files)
-
-    #     # Upload the entire ChromaDB directory to S3
-    #     upload_directory_to_s3(temp_dir, s3_obj, "chroma_db")
-        
-    #     print("ChromaDB has been uploaded to S3.")
-    #     # Explicitly close the ChromaDB client
-
-def create_chromadb():
+def create_chromadb(year, **kwargs):
     with tempfile.TemporaryDirectory() as temp_dir:
         chroma_client = chromadb.PersistentClient(path=temp_dir)
-        base_path = "nvdia/"
+        base_path = f"nvidia/{year}"
         s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
 
         files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
