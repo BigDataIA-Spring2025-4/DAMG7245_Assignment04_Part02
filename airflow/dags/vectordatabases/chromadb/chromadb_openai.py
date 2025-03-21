@@ -7,7 +7,7 @@ from fastapi import HTTPException
 import tempfile
 from dotenv import load_dotenv
 
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+from vectordatabases.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from services.s3 import S3FileManager
 
 from airflow.models import Variable

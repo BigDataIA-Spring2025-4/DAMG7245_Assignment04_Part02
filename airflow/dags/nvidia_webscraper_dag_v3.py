@@ -69,18 +69,17 @@ with DAG(
             )
 
     # Task to trigger another DAG after all processing tasks are complete
-    trigger_next_dag = TriggerDagRunOperator(
-        task_id="trigger_next_dag",
-        trigger_dag_id="next_dag_id",  # Replace with actual DAG ID of the next DAG
-        wait_for_completion=False,  # Set to True if you need to wait for the next DAG's completion
+    trigger_verctor_db_push = TriggerDagRunOperator(
+        task_id="trigger_verctor_db_push",
+        trigger_dag_id="nvidia_create_vector_databases",  
+        wait_for_completion=False,
     )
 
-    # **Correctly linking tasks**
-    scrape >> list(upload_tasks.values())  # Scraping triggers all upload tasks
+    scrape >> list(upload_tasks.values()) 
 
     for i in range(4, 0, -1):  
         upload_tasks[i] >> docling_tasks[i]  # Each upload task triggers its Docling task
         upload_tasks[i] >> mistral_tasks[i]  # Each upload task triggers its Mistral task
 
     # Ensure the next DAG is triggered only after all processing tasks are completed
-    list(docling_tasks.values()) + list(mistral_tasks.values()) >> trigger_next_dag
+    list(docling_tasks.values()) + list(mistral_tasks.values()) >> trigger_verctor_db_push
