@@ -55,15 +55,15 @@ The project focuses on designing an AI-powered information retrieval system that
 
 ## Resources
 
-Application: 
+Application: [Streamlit Application](https://nvidia-rag-finance.streamlit.app/)
 
-Backend FastAPI: 
+Backend FastAPI: [Cloud Run Link](https://fastapi-service-iovzhmsraa-ue.a.run.app/docs)
 
-Airflow Endpoint: 
+Airflow Endpoint: [Airflow Link](http://35.209.49.151:8080/home)
 
-Google Codelab: 
+Google Codelab: [Codelab Link](https://codelabs-preview.appspot.com/?file_id=1wNuNnA158jJYUCYnTUqUbAgyzFWdDzevLy3CQaNrNlk/edit?tab=t.0#0)
 
-Google Docs: 
+Google Docs: [Docs Links](https://docs.google.com/document/d/1wNuNnA158jJYUCYnTUqUbAgyzFWdDzevLy3CQaNrNlk/edit?tab=t.0)
 
 Video Walkthrough:
 
