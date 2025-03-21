@@ -125,9 +125,9 @@ def get_manual_vector_store(file, chunks, chunk_strategy):
         })
     return vectors
 
-def create_manual_vector_store():
+def create_manual_vector_store(year, **kwargs):
     print("helloooo")
-    base_path = "nvidia/"
+    base_path = f"nvidia/{year}"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     all_vectors = load_from_s3_pickle(s3_obj)
     print("updated all vectors")

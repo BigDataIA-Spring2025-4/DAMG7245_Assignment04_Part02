@@ -73,6 +73,7 @@ with DAG(
         task_id="trigger_vector_db_push",
         trigger_dag_id="nvidia_create_vector_spaces",  
         wait_for_completion=False,
+        conf={"year": "{{ dag_run.conf.get('year', '2025') }}"}
     )
 
     scrape >> list(upload_tasks.values()) 

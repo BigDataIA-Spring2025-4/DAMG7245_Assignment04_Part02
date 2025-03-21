@@ -31,16 +31,21 @@ with DAG(
     chromadb = PythonOperator(
         task_id='create_chroma_db_vector_space',
         python_callable=create_chromadb,
+        op_kwargs={'year': "{{ dag_run.conf.get('year', '2025') }}"}
     )
 
     # Task 2: Create Manual vector space generator
     manualdb = PythonOperator(
         task_id='create_manual_db_vector_space',
         python_callable=create_manual_vector_store,
+        op_kwargs={'year': "{{ dag_run.conf.get('year', '2025') }}"}
     )
 
     # Task 3: Create Pinecone vector space generator
     pineconedb = PythonOperator(
         task_id='create_pinecone_db_vector_space',
         python_callable=create_pinecone,
+        op_kwargs={'year': "{{ dag_run.conf.get('year', '2025') }}"}
     )
+
+    pineconedb >> manualdb >> chromadb

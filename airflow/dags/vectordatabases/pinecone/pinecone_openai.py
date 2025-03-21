@@ -47,11 +47,19 @@ def get_embedding(text):
 def create_pinecone_vector_store(file, chunks, chunk_strategy):
     index = connect_to_pinecone_index()
     vectors = []
+    # file = file.split('/')
+    # parser = file[1]
+    # identifier = file[2]
+    # year = identifier[2:6]
+    # quarter = identifier[6:]
+
     file = file.split('/')
-    parser = file[1]
-    identifier = file[2]
-    year = identifier[2:6]
-    quarter = identifier[6:]
+    parser = file[-2]
+    # identifier = file[2]
+    year = file[-4]
+    quarter = file[-3]
+    identifier = f"FY{year}{quarter}"
+
     records = 0
     for i, chunk in enumerate(chunks):
         embedding = get_embedding(chunk)
@@ -99,8 +107,8 @@ def query_pinecone(parser, chunking_strategy, query, top_k=20, year = "2025", qu
         print("=================================================================================")
     return responses
 
-def create_pinecone():
-    base_path = "nvdia/"
+def create_pinecone(year, **kwargs):
+    base_path = f"nvidia/{year}"
     
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})

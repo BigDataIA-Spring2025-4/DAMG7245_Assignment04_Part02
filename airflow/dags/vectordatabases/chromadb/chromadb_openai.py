@@ -168,10 +168,10 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
             raise HTTPException(status_code=500, detail=f"Error querying ChromaDB: {str(e)}")
 
 
-def create_chromadb():
+def create_chromadb(year, **kwargs):
     with tempfile.TemporaryDirectory() as temp_dir:
         chroma_client = chromadb.PersistentClient(path=temp_dir)
-        base_path = "nvidia/"
+        base_path = f"nvidia/{year}"
         s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
 
         files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
