@@ -19,9 +19,12 @@ def save_to_s3_pickle(s3_obj, vectors, key=DOCUMENTS_KEY_PKL):
     s3_obj.upload_file(AWS_BUCKET_NAME, save_file_path, pickle_data)
 
 def load_from_s3_pickle(s3_obj, key=DOCUMENTS_KEY_PKL):
-    save_file_path = f"{s3_obj.base_path}/{DOCUMENTS_KEY_PKL}"
-    pickle_data = s3_obj.load_s3_pdf(save_file_path)
-    return pickle.loads(pickle_data)
+    try:
+        save_file_path = f"{s3_obj.base_path}/{DOCUMENTS_KEY_PKL}"
+        pickle_data = s3_obj.load_s3_pdf(save_file_path)
+        return pickle.loads(pickle_data)
+    except:
+        return []
 
 
 def read_markdown_file(file, s3_obj):
@@ -124,11 +127,11 @@ def get_manual_vector_store(file, chunks, chunk_strategy):
 
 def create_manual_vector_store():
     print("helloooo")
-    base_path = "nvdia/"
+    base_path = "nvidia/"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     all_vectors = load_from_s3_pickle(s3_obj)
-    print(all_vectors)
-
+    print("updated all vectors")
+    # all_vectors=[]
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     print(files)
     # all_vectors = []
