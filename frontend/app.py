@@ -14,7 +14,8 @@ pdfparser = {
 
 chunking = {
         "Markdown": "markdown",
-        "Semantic": "semantic"
+        "Semantic": "semantic",
+        "Sliding Window": "sliding_window"
     }
 
 vectorstores = {

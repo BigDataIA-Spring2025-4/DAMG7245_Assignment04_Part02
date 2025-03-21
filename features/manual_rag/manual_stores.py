@@ -94,6 +94,7 @@ def create_manual_vector_store_doc(file, chunks, chunk_strategy, parser):
 
 def generate_response_manual(s3_obj, parser, chunking_strategy, query, top_k=5, year=None, quarter=None):
     query_embedding = get_embedding(query)
+    print("Generating manual reponses")
     documents = load_from_s3_pickle(s3_obj)
     if year and quarter:
         filtered_docs = [doc for doc in documents if 
@@ -171,7 +172,7 @@ def create_manual_vector_store():
 
         chunks = sliding_window_chunking(content)
         print(f"sliding Chunk size: {len(chunks)}")
-        vector = get_manual_vector_store(file, chunks, "sliding")
+        vector = get_manual_vector_store(file, chunks, "sliding_window")
         all_vectors.extend(vector)
 
     save_to_s3_pickle(s3_obj, all_vectors)
