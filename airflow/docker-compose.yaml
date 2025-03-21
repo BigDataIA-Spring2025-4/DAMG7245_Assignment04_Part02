@@ -45,7 +45,7 @@ x-airflow-common:
   # In order to add custom dependencies or upgrade provider packages you can use your extended image.
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run docker-compose build to build the images.
-  image: apache/airflow:2.10.5-python3.12
+  image: apache/airflow:2.9.3-python3.12
   # build: .
   environment:
     &airflow-common-env
@@ -176,7 +176,12 @@ services:
         function ver() {
           printf "%04d%04d%04d%04d" $${1//./ }
         }
-        airflow_version=$$(AIRFLOW__LOGGING__LOGGING_LEVEL=INFO && gosu airflow airflow version)
+        # Modified part to handle missing gosu
+        if command -v gosu > /dev/null; then
+          airflow_version=$$(AIRFLOW__LOGGING__LOGGING_LEVEL=INFO && gosu airflow airflow version)
+        else
+          airflow_version=$$(AIRFLOW__LOGGING__LOGGING_LEVEL=INFO && airflow version)
+        fi
         airflow_version_comparable=$$(ver $${airflow_version})
         min_airflow_version=2.2.0
         min_airflow_version_comparable=$$(ver $${min_airflow_version})
@@ -187,6 +192,7 @@ services:
           echo
           exit 1
         fi
+        # Rest of script remains unchanged
         if [[ -z "${AIRFLOW_UID}" ]]; then
           echo
           echo -e "\033[1;33mWARNING!!!: AIRFLOW_UID not set!\e[0m"
@@ -286,6 +292,6 @@ services:
     restart: always
 
   airflow:
-    image: apache/airflow:2.10.5-python3.12 
+    image: apache/airflow:2.9.3-python3.12 
 volumes:
   postgres-db-volume:
