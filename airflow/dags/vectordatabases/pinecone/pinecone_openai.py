@@ -1,16 +1,14 @@
 import openai, os, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
-from dotenv import load_dotenv
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
-# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
-load_dotenv()
+from vectordatabases.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+from airflow.models import Variable
 
 # Initialize Pinecone
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX")
-AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PINECONE_API_KEY = Variable.get("PINECONE_API_KEY")
+PINECONE_INDEX = Variable.get("PINECONE_INDEX")
+AWS_BUCKET_NAME = Variable.get("AWS_BUCKET_NAME")
+OPENAI_API_KEY = Variable.get("OPENAI_API_KEY")
 
 def connect_to_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -97,7 +95,7 @@ def query_pinecone(parser, chunking_strategy, query, top_k=20, year = "2025", qu
         print("=================================================================================")
     return responses
 
-def main():
+def create_pinecone():
     base_path = "nvdia/"
     
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
@@ -125,6 +123,3 @@ def main():
         create_pinecone_vector_store(file, chunks, "slidingwindow")
     # hybrid_search(parser="mistral", chunking_strategy="semantic", query="risk factors", top_k=5, year="2025", quarter=["Q1","Q4"])
     
-if __name__ == "__main__":
-    # Load the OpenAI API key from the environment
-    main()

@@ -5,19 +5,14 @@ import pickle
 from sklearn.metrics.pairwise import cosine_similarity
 import openai
 
-from dotenv import load_dotenv
-
+from airflow.models import Variable
 from services.s3 import S3FileManager
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+from vectordatabases.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 
+AWS_BUCKET_NAME = Variable.get("AWS_BUCKET_NAME")
+OPENAI_API_KEY = Variable.get("OPENAI_API_KEY")
 
-load_dotenv()
-AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# DOCUMENTS_KEY = "manual_store.json"
 DOCUMENTS_KEY_PKL = "manual_store.pkl"
-
 
 def save_to_s3_pickle(s3_obj, vectors, key=DOCUMENTS_KEY_PKL):
     save_file_path = f"{s3_obj.base_path}/{DOCUMENTS_KEY_PKL}"
@@ -67,26 +62,6 @@ def create_manual_vector_store_doc(file, chunks, chunk_strategy, parser):
     vector = get_manual_vector_doc(file_name, chunks, chunk_strategy, parser)
     save_to_s3_pickle(s3_obj, vector)
 
-    # all_vectors = []
-    # content = read_markdown_file(file_name, s3_obj)
-
-    # chunks = markdown_chunking(content, heading_level=2)
-    # print(f"markdown Chunk size: {len(chunks)}")
-    # vector = get_manual_vector_doc(file, chunks, "markdown", parser)
-    # all_vectors.extend(vector)
-
-    # chunks = semantic_chunking(content)
-    # print(f"semantic Chunk size: {len(chunks)}")
-    # vector = get_manual_vector_doc(file, chunks, "semantic", parser)
-    # all_vectors.extend(vector)
-
-    # chunks = sliding_window_chunking(content)
-    # print(f"sliding Chunk size: {len(chunks)}")
-    # vector = get_manual_vector_doc(file, chunks, "sliding", parser)
-    # all_vectors.extend(vector)
-
-    # save_to_s3_pickle(s3_obj, all_vectors)
-
     return s3_obj
 
 #### END DOC ####
@@ -116,7 +91,6 @@ def generate_response_manual(s3_obj, parser, chunking_strategy, query, top_k=5, 
     
     top_indices = np.argsort(similarities)[-top_k:][::-1]
     top_docs = [filtered_docs[i] for i in top_indices]
-    # top_similarities = [float(similarities[i]) for i in top_indices]
 
     results = []
     for doc in top_docs:
@@ -129,10 +103,10 @@ def generate_response_manual(s3_obj, parser, chunking_strategy, query, top_k=5, 
 def get_manual_vector_store(file, chunks, chunk_strategy):
     vectors = []
     file = file.split('/')
-    parser = file[1]
-    identifier = file[2]
-    year = identifier[2:6]
-    quarter = identifier[6:]
+    parser = file[-2]
+    year = file[-4]
+    quarter = file[-3]
+    identifier = f"FY{year}{quarter}"
 
     embeddings_data = get_embedding(chunks)
     for i, embed in enumerate(embeddings_data):
@@ -152,10 +126,12 @@ def get_manual_vector_store(file, chunks, chunk_strategy):
 def create_manual_vector_store():
     base_path = "nvdia/"
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+    all_vectors = load_from_s3_pickle(s3_obj)
+    print(all_vectors)
 
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     print(files)
-    all_vectors = []
+    # all_vectors = []
     for i, file in enumerate(files):
         print(f"Processing File {i+1}: {file}")
         content = read_markdown_file(file, s3_obj)
