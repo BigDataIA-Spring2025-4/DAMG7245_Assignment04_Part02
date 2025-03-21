@@ -1,17 +1,16 @@
 from datetime import datetime
-from io import BytesIO
-from nvidia_raw_pdf_handler.links_to_s3_push import upload_pdf_to_s3
-from nvidia_raw_pdf_handler.website_scraper import scrape_from_nvidia_website
 from airflow.models import Variable
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
+from airflow.utils.task_group import TaskGroup
 
-# Fetch Airflow variable
+from nvidia_raw_pdf_handler.links_to_s3_push import upload_pdf_to_s3
+from nvidia_raw_pdf_handler.website_scraper import scrape_from_nvidia_website
+from nvidia_raw_pdf_processing.docling_pdf_extractor_caller import pdf_docling_converter
+from nvidia_raw_pdf_processing.mistralocr_pdf_extractor_caller import pdf_mistralocr_converter
+
+# Fetch Airflow variables
 AWS_BUCKET_NAME = Variable.get("AWS_BUCKET_NAME")
-AWS_ACCESS_KEY_ID = Variable.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = Variable.get("AWS_SECRET_ACCESS_KEY")
-s3_path = f"s3://{AWS_BUCKET_NAME}"
 
 default_args = {
     'owner': 'airflow',
@@ -20,28 +19,57 @@ default_args = {
 }
 
 with DAG(
-    dag_id='nvidia_financial_docs_scraper_and_loader_v1',
+    dag_id='nvidia_financial_docs_scraper_and_loader_v2',
     default_args=default_args,
     tags=['nvidia'],
-    description='Extract NVIDIA financial documents for one year and all 4-Qs, transform it using docling or mistral, and load into S3',
+    description='Extract NVIDIA financial documents for one year and all 4-Qs, transform using Docling or Mistral, and load into S3',
     schedule_interval=None,
     start_date=datetime(2025, 1, 1),
     catchup=False,
+    max_active_tasks=4,
 ) as dag:
 
+    # Task 1: Scrape from NVIDIA website
     scrape = PythonOperator(
         task_id='scrape_from_nvidia_website',
         python_callable=scrape_from_nvidia_website,
     )
 
-    upload_tasks = []
+    # Upload tasks dictionary
+    upload_tasks = {}
     for i in range(4, 0, -1):  
-        raw_upload_to_s3 = PythonOperator(
-            task_id=f'Upload_to_S3_Q{i}', 
+        upload_tasks[i] = PythonOperator(
+            task_id=f'Upload_to_S3_Q{i}',
             python_callable=upload_pdf_to_s3,
             provide_context=True,
             op_kwargs={'task_id': f'Upload_to_S3_Q{i}'},
         )
-        upload_tasks.append(raw_upload_to_s3)
 
-    scrape >> upload_tasks
+    # Processing TaskGroups (Docling & Mistral)
+    docling_tasks = {}
+    mistral_tasks = {}
+
+    with TaskGroup("Docling_Processing") as docling_cluster:
+        for i in range(4, 0, -1):
+            docling_tasks[i] = PythonOperator(
+                task_id=f'Parse_via_Docling_Q{i}',
+                python_callable=pdf_docling_converter,
+                provide_context=True,
+                op_kwargs={'quarter': i, 'source_task_id': f'Upload_to_S3_Q{i}'},
+            )
+
+    with TaskGroup("Mistral_Processing") as mistral_cluster:
+        for i in range(4, 0, -1):
+            mistral_tasks[i] = PythonOperator(
+                task_id=f'Parse_via_Mistral_Q{i}',
+                python_callable=pdf_mistralocr_converter,
+                provide_context=True,
+                op_kwargs={'quarter': i, 'source_task_id': f'Upload_to_S3_Q{i}'},
+            )
+
+    # **Correctly linking tasks**
+    scrape >> list(upload_tasks.values())  # Scraping triggers all upload tasks
+
+    for i in range(4, 0, -1):  
+        upload_tasks[i] >> docling_tasks[i]  # Each upload task triggers its Docling task
+        upload_tasks[i] >> mistral_tasks[i]  # Each upload task triggers its Mistral task
