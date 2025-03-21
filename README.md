@@ -213,6 +213,21 @@ pip install -r requirements.txt
 - Configure settings as needed (e.g., versioning, encryption).
 - Click **Create bucket** to finalize.
 
+## References
+
+[Streamlit Documentation](https://docs.streamlit.io/) - For hosting the frontend application
+
+[FastAPI Documentation](https://fastapi.tiangolo.com/) - For hosting the application endpoints
+
+[Docling Documentation](https://ds4sd.github.io/docling/) - For PDF data extraction and parsing 
+
+[Airflow](https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html)
+
+[Pinecone](https://www.pinecone.io/?utm_term=pinecone%20database&utm_campaign=brand-us-p&utm_source=adwords&utm_medium=ppc&hsa_acc=3111363649&hsa_cam=16223687665&hsa_grp=133738612775&hsa_ad=582256510975&hsa_src=g&hsa_tgt=kwd-1628011569744&hsa_kw=pinecone%20database&hsa_mt=p&hsa_net=adwords&hsa_ver=3&gad_source=1&gclid=CjwKCAjwnPS-BhBxEiwAZjMF0nFJVWpg9eEPcztz-TW5kQlc2pHrwV8O9KNX_jxqiIsfgm0-E3pUTBoCmxkQAvD_BwE)
+
+[ChromaDB](https://docs.trychroma.com/docs/overview/introduction)
+
+
 
 
 
