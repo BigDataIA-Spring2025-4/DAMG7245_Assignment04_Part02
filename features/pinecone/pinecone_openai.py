@@ -1,8 +1,9 @@
-import openai, os, markdown, re
+import openai, os, re
 from pinecone import Pinecone, ServerlessSpec
 from services.s3 import S3FileManager
 from dotenv import load_dotenv
-from chunk_strategy import markdown_chunking, semantic_chunking
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
+# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 load_dotenv()
 
 # Initialize Pinecone
@@ -13,8 +14,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 def connect_to_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)
-    # print(pc.list_indexes())
-    # if PINECONE_INDEX not in pc.list_indexes():
     if not pc.has_index(PINECONE_INDEX):
         pc.create_index(
             name=PINECONE_INDEX,
@@ -76,14 +75,12 @@ def create_pinecone_vector_store(file, chunks, chunk_strategy):
 def upsert_vectors(index, vectors, parser, chunk_strategy):
     index.upsert(vectors=vectors, namespace=f"{parser}_{chunk_strategy}")
 
-def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", quarter = ["Q4"]):
+def query_pinecone(parser, chunking_strategy, query, top_k=20, year = "2025", quarter = ["Q4"]):
     # Search the dense index and rerank the results
     index = connect_to_pinecone_index()
-    
     dense_vector = get_embedding(query)
-    
     results = index.query(
-        namespace="docling_markdown",
+        namespace=f"{parser}_{chunking_strategy}",
         vector=dense_vector,  # Dense vector embedding
         filter={
             "year": {"$eq": year},
@@ -92,14 +89,13 @@ def hybrid_search(parser, chunking_strategy, query, top_k=20, year = "2025", qua
         top_k=top_k,
         include_metadata=True,  # Include chunk text
     )
-    
-    # print(results)
-    # Print the retrieved documents
-    
+    responses = []
     for match in results["matches"]:
         print(f"ID: {match['id']}, Score: {match['score']}")
         # print(f"Chunk: {match['metadata']['text']}\n")
+        responses.append(match['metadata']['text'])
         print("=================================================================================")
+    return responses
 
 def main():
     base_path = "nvdia/"
@@ -109,17 +105,24 @@ def main():
     # files = files[:1]
     print(files)
     # files = []
-    for file in files:
-        print(f"Processing file: {file}")
+    for i, file in enumerate(files):
+        print(f"Processing File {i+1}: {file}")
         content = read_markdown_file(file, s3_obj)
+        
+        print("Using markdown chunking strategy...")
         chunks = markdown_chunking(content, heading_level=2)
         print(f"Chunk size: {len(chunks)}")
-        # Create Pinecone vector store for the current file
         create_pinecone_vector_store(file, chunks, "markdown")
+        
+        print("Using semantic chunking strategy...")
         chunks = semantic_chunking(content, max_sentences=10)
         print(f"Chunk size: {len(chunks)}")
-        # Create Pinecone vector store for the current file
         create_pinecone_vector_store(file, chunks, "semantic")
+        
+        print("Using sliding window chunking strategy...")
+        chunks = sliding_window_chunking(content, chunk_size=1000, overlap=150)
+        print(f"Chunk size: {len(chunks)}")
+        create_pinecone_vector_store(file, chunks, "slidingwindow")
     # hybrid_search(parser="mistral", chunking_strategy="semantic", query="risk factors", top_k=5, year="2025", quarter=["Q1","Q4"])
     
 if __name__ == "__main__":

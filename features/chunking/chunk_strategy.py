@@ -68,3 +68,27 @@ def semantic_chunking(text, max_sentences=5):
         chunks.extend(split_chunk(merged_chunk, max_tokens=TOKEN_LIMIT // 2))
    
     return chunks
+
+def sliding_window_chunking(text, chunk_size=SUB_CHUNK_SIZE, overlap=200):
+    """Splits text into overlapping token-based chunks while ensuring token limits."""
+    tokens = tokenizer.encode(text)
+    chunks = []
+    
+    start = 0
+    while start < len(tokens):
+        end = min(start + chunk_size, len(tokens))
+        chunk_tokens = tokens[start:end]
+        chunk_text = tokenizer.decode(chunk_tokens)
+
+        # Ensure the chunk doesn't exceed the max allowed token limit
+        if count_tokens(chunk_text) > TOKEN_LIMIT // 2:
+            chunks.extend(split_chunk(chunk_text, max_tokens=TOKEN_LIMIT // 2))
+        else:
+            chunks.append(chunk_text)
+
+        if end == len(tokens):
+            break  # Stop if we've reached the end
+        
+        start += chunk_size - overlap  # Slide the window with overlap
+    
+    return chunks
