@@ -84,7 +84,7 @@ Video Walkthrough:
 
 ## Application Workflow Diagram
 
-![Image]()
+![Application Workflow Diagram](diagram.png)
 
 ### **Workflow**
 
