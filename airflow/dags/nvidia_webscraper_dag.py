@@ -71,7 +71,7 @@ with DAG(
     # Task to trigger another DAG after all processing tasks are complete
     trigger_verctor_db_push = TriggerDagRunOperator(
         task_id="trigger_vector_db_push",
-        trigger_dag_id="nvidia_create_vector_databases",  
+        trigger_dag_id="nvidia_create_vector_spaces",  
         wait_for_completion=False,
     )
 

@@ -32,7 +32,7 @@ if "file_upload" not in st.session_state:
 
 def trigger_airflow_dag():
     st.write("Now triggering airflow dag...")
-    year = st.selectbox("Select Year", range(2024, 2020,-1))
+    year = st.selectbox("Select Year", range(2025, 2020,-1))
     trigger = st.button("Trigger Airflow DAG", use_container_width=True, icon = "🚀")
     if trigger:
         # Payload for triggering the DAG
