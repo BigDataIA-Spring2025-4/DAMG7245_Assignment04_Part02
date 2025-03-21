@@ -36,7 +36,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
     collection_doc_mark = chroma_client.get_or_create_collection(name="docling_markdown")
     collection_mist_mark = chroma_client.get_or_create_collection(name="mistral_markdown")
     collection_doc_slid = chroma_client.get_or_create_collection(name="docling_sliding")
-    collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_Sliding")
+    collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_sliding")
 
     file = file.split('/')
     parser = file[1]
