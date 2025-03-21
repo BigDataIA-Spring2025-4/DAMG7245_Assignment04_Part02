@@ -102,7 +102,7 @@ async def query_document(request: DocumentQueryRequest):
             print(answer)
         
         elif vector_store == "manual":
-            s3_obj = await create_manual_vector_store_doc(file_name, chunks, chunk_strategy, parser)
+            s3_obj = create_manual_vector_store_doc(file_name, chunks, chunk_strategy, parser)
             result_chunks = generate_response_manual(s3_obj, parser, chunk_strategy, query, top_k)
             
             message = generate_openai_message_document(query, result_chunks)
@@ -128,6 +128,8 @@ def query_nvdia_documents(request: NVDIARequest):
         vector_store = request.vector_store
         top_k = 10
         if vector_store == "pinecone":
+            if chunk_strategy == "sliding_window":
+                chunk_strategy = "slidingwindow"
             chunks = generate_response_from_pinecone(parser = parser, chunk_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
             # print(chunks)
             if len(chunks) == 0:
@@ -148,7 +150,8 @@ def query_nvdia_documents(request: NVDIARequest):
         elif vector_store == "manual":
             base_path = "nvdia/"
             s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
-            chunks = generate_response_manual(s3_obj, parser = parser, chunk_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+
+            chunks = generate_response_manual(s3_obj, parser = parser, chunking_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
             if len(chunks) == 0:
                 raise HTTPException(status_code=500, detail="No relevant data found in the document")
             else:

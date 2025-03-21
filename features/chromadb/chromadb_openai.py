@@ -35,8 +35,8 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
     collection_mist_sem = chroma_client.get_or_create_collection(name="mistral_semantic")
     collection_doc_mark = chroma_client.get_or_create_collection(name="docling_markdown")
     collection_mist_mark = chroma_client.get_or_create_collection(name="mistral_markdown")
-    collection_doc_slid = chroma_client.get_or_create_collection(name="docling_sliding")
-    collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_sliding")
+    collection_doc_slid = chroma_client.get_or_create_collection(name="docling_sliding_window")
+    collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_sliding_window")
 
     file = file.split('/')
     parser = file[1]
@@ -54,7 +54,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
     ids = [f"{parser}_{chunk_strategy}_{identifier}_{i}" for i in range(len(chunks))]
     if parser == 'docling' and chunk_strategy == 'semantic':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_doc_sem.add(
+        collection_doc_sem.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
@@ -63,7 +63,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
 
     elif parser == 'docling' and chunk_strategy == 'markdown':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_doc_mark.add(
+        collection_doc_mark.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
@@ -72,7 +72,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
 
     elif parser == 'mistral' and chunk_strategy == 'semantic':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_mist_sem.add(
+        collection_mist_sem.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
@@ -81,23 +81,23 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
 
     elif parser == 'mistral' and chunk_strategy == 'markdown':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_mist_mark.add(
+        collection_mist_mark.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
                 documents=chunks
             )
-    elif parser == 'docling' and chunk_strategy == 'sliding':
+    elif parser == 'docling' and chunk_strategy == 'sliding_window':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_doc_slid.add(
+        collection_doc_slid.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
                 documents=chunks
             )
-    elif parser == 'docling' and chunk_strategy == 'sliding':
+    elif parser == 'mistral' and chunk_strategy == 'sliding_window':
         print(f"adding to collection - {parser} - {chunk_strategy}")
-        collection_mist_slid.add(
+        collection_mist_slid.upsert(
                 ids=ids,
                 embeddings=embeddings,
                 metadatas=metadata,
@@ -217,7 +217,7 @@ def main():
         # For Sliding chunking strategy
         chunks_sliding = sliding_window_chunking(content)
         print(f"Chunk size Sliding: {len(chunks_sem)}")
-        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "sliding")
+        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "sliding_window")
 
     print(files)
 
