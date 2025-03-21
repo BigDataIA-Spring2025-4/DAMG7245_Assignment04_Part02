@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 
 from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking  # make changes
 from services.s3 import S3FileManager
+# from s3 import S3FileManager
+# from chunk_strategy import markdown_chunking, semantic_chunking
 
 load_dotenv()
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -135,7 +137,7 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
             
             where_filter = {
                         "$and": [
-                            {"quarter": {"$eq": quarter}},
+                            {"quarter": {"$in": quarter}},
                             {"year": {"$eq": year}}
                         ]
                     }
@@ -181,7 +183,7 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
         
     #     print("ChromaDB has been uploaded to S3.")
     #     # Explicitly close the ChromaDB client
-    
+
 def main():
     temp_dir = tempfile.mkdtemp()
     chroma_client = chromadb.PersistentClient(path=temp_dir)
