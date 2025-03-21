@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from services.s3 import S3FileManager
 # from s3 import S3FileManager
-# from chunk_strategy import markdown_chunking, semantic_chunking
+# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 
 load_dotenv()
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -111,8 +111,7 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
             local_path = os.path.join(root, file)
             # Create the S3 key by replacing the local directory path with the S3 prefix
             relative_path = os.path.relpath(local_path, local_dir)
-            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path).replace("\\", "/")}"
-            
+            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path)}".replace("\\", "/")
             with open(local_path, "rb") as f:
                 s3_obj.upload_file(AWS_BUCKET_NAME, s3_key, f.read())
 
@@ -202,8 +201,9 @@ def main():
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     # files = files[:2]  # process only first two files
     for file in files:
+        print(file)
         content = read_markdown_file(file, s3_obj)
-
+        print("\nread markdown")
         # For markdown chunking strategy
         chunks_mark = markdown_chunking(content, heading_level=2)
         print(f"Chunk size markdown: {len(chunks_mark)}")
@@ -217,7 +217,7 @@ def main():
         # For Sliding chunking strategy
         chunks_sliding = sliding_window_chunking(content)
         print(f"Chunk size Sliding: {len(chunks_sem)}")
-        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "Sliding")
+        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "sliding")
 
     print(files)
 
