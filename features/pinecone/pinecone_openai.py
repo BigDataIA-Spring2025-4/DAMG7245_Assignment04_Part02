@@ -98,7 +98,7 @@ def query_pinecone(parser, chunking_strategy, query, top_k=20, year = "2025", qu
     return responses
 
 def main():
-    base_path = "nvdia/"
+    base_path = "nvidia/"
     
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
