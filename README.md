@@ -61,9 +61,9 @@ Backend FastAPI:
 
 Airflow Endpoint: 
 
-Google Codelab: 
+Google Codelab: [Codelab Link](https://codelabs-preview.appspot.com/?file_id=1wNuNnA158jJYUCYnTUqUbAgyzFWdDzevLy3CQaNrNlk/edit?tab=t.0#0)
 
-Google Docs: 
+Google Docs: [Google Docs](https://docs.google.com/document/d/1wNuNnA158jJYUCYnTUqUbAgyzFWdDzevLy3CQaNrNlk/edit?tab=t.0)
 
 Video Walkthrough:
 
