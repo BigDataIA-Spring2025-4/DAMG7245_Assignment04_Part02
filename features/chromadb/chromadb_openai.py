@@ -7,10 +7,10 @@ from fastapi import HTTPException
 import tempfile
 from dotenv import load_dotenv
 
-# from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking  # make changes
-# from services.s3 import S3FileManager
-from s3 import S3FileManager
-from chunk_strategy import markdown_chunking, semantic_chunking
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking  # make changes
+from services.s3 import S3FileManager
+# from s3 import S3FileManager
+# from chunk_strategy import markdown_chunking, semantic_chunking
 
 load_dotenv()
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
