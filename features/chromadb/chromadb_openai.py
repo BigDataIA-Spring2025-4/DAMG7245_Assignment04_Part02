@@ -7,8 +7,10 @@ from fastapi import HTTPException
 import tempfile
 from dotenv import load_dotenv
 
-from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking  # make changes
+from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from services.s3 import S3FileManager
+# from s3 import S3FileManager
+# from chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 
 load_dotenv()
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -33,6 +35,8 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
     collection_mist_sem = chroma_client.get_or_create_collection(name="mistral_semantic")
     collection_doc_mark = chroma_client.get_or_create_collection(name="docling_markdown")
     collection_mist_mark = chroma_client.get_or_create_collection(name="mistral_markdown")
+    collection_doc_slid = chroma_client.get_or_create_collection(name="docling_sliding")
+    collection_mist_slid = chroma_client.get_or_create_collection(name="mistral_sliding")
 
     file = file.split('/')
     parser = file[1]
@@ -56,7 +60,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
                 metadatas=metadata,
                 documents=chunks
             )
-        print(f"Items in docling_semantic: {collection_doc_sem.count()}")
+
     elif parser == 'docling' and chunk_strategy == 'markdown':
         print(f"adding to collection - {parser} - {chunk_strategy}")
         collection_doc_mark.add(
@@ -65,7 +69,7 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
                 metadatas=metadata,
                 documents=chunks
             )
-        print(f"Items in docling_markdown: {collection_doc_mark.count()}")
+
     elif parser == 'mistral' and chunk_strategy == 'semantic':
         print(f"adding to collection - {parser} - {chunk_strategy}")
         collection_mist_sem.add(
@@ -74,7 +78,6 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
                 metadatas=metadata,
                 documents=chunks
             )
-        print(f"Items in mistral semantic: {collection_mist_sem.count()}")
 
     elif parser == 'mistral' and chunk_strategy == 'markdown':
         print(f"adding to collection - {parser} - {chunk_strategy}")
@@ -84,7 +87,22 @@ def create_chromadb_vector_store(chroma_client, file, chunks, chunk_strategy):
                 metadatas=metadata,
                 documents=chunks
             )
-        print(f"Items in mistral markdown: {collection_mist_mark.count()}")
+    elif parser == 'docling' and chunk_strategy == 'sliding':
+        print(f"adding to collection - {parser} - {chunk_strategy}")
+        collection_doc_slid.add(
+                ids=ids,
+                embeddings=embeddings,
+                metadatas=metadata,
+                documents=chunks
+            )
+    elif parser == 'docling' and chunk_strategy == 'sliding':
+        print(f"adding to collection - {parser} - {chunk_strategy}")
+        collection_mist_slid.add(
+                ids=ids,
+                embeddings=embeddings,
+                metadatas=metadata,
+                documents=chunks
+            )
 
 def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
     """Upload a directory and its contents to S3"""
@@ -93,8 +111,7 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
             local_path = os.path.join(root, file)
             # Create the S3 key by replacing the local directory path with the S3 prefix
             relative_path = os.path.relpath(local_path, local_dir)
-            s3_key = os.path.join(s3_prefix, relative_path).replace("\\", "/")
-            
+            s3_key = f"{s3_obj.base_path}/{os.path.join(s3_prefix, relative_path)}".replace("\\", "/")
             with open(local_path, "rb") as f:
                 s3_obj.upload_file(AWS_BUCKET_NAME, s3_key, f.read())
 
@@ -102,7 +119,7 @@ def upload_directory_to_s3(local_dir, s3_obj, s3_prefix):
 
 def download_chromadb_from_s3(s3_obj, temp_dir):
     """Download ChromaDB files from S3 to a temporary directory"""
-    s3_prefix = "chroma_db"
+    s3_prefix = f"{s3_obj.base_path}/chroma_db"
     s3_files = [f for f in s3_obj.list_files() if f.startswith(s3_prefix)]
     
     for s3_file in s3_files:
@@ -124,33 +141,26 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
             s3_obj = S3FileManager(AWS_BUCKET_NAME, "")
             download_chromadb_from_s3(s3_obj, temp_dir)
             chroma_client = chromadb.PersistentClient(path=temp_dir)
-
             try:
                 collection = chroma_client.get_collection(f"{parser}_{chunking_strategy}")
             except Exception as e:
                 raise HTTPException(status_code=404, detail=f"Collection not found: {str(e)}")
-            
-            # Create embeddings for the query
+
             query_embeddings = get_chroma_embeddings([query])
-            
             where_filter = {
                         "$and": [
-                            {"quarter": {"$eq": quarter}},
+                            {"quarter": {"$in": quarter}},
                             {"year": {"$eq": year}}
                         ]
                     }
-            # Execute the query
             results = collection.query(
                 query_embeddings=query_embeddings,
                 n_results=top_k,
                 where=where_filter
-            )
-            
+            )       
             return results["documents"]
-            
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error querying ChromaDB: {str(e)}")
-
 
 
 # def main():
@@ -181,7 +191,7 @@ def query_chromadb(parser, chunking_strategy, query, top_k, year, quarter):
         
     #     print("ChromaDB has been uploaded to S3.")
     #     # Explicitly close the ChromaDB client
-    
+
 def main():
     temp_dir = tempfile.mkdtemp()
     chroma_client = chromadb.PersistentClient(path=temp_dir)
@@ -191,8 +201,9 @@ def main():
     files = list({file for file in s3_obj.list_files() if file.endswith('.md')})
     # files = files[:2]  # process only first two files
     for file in files:
+        print(file)
         content = read_markdown_file(file, s3_obj)
-
+        print("\nread markdown")
         # For markdown chunking strategy
         chunks_mark = markdown_chunking(content, heading_level=2)
         print(f"Chunk size markdown: {len(chunks_mark)}")
@@ -202,6 +213,11 @@ def main():
         chunks_sem = semantic_chunking(content, max_sentences=10)
         print(f"Chunk size semantic: {len(chunks_sem)}")
         create_chromadb_vector_store(chroma_client, file, chunks_sem, "semantic")
+
+        # For Sliding chunking strategy
+        chunks_sliding = sliding_window_chunking(content)
+        print(f"Chunk size Sliding: {len(chunks_sem)}")
+        create_chromadb_vector_store(chroma_client, file, chunks_sliding, "sliding")
 
     print(files)
 
