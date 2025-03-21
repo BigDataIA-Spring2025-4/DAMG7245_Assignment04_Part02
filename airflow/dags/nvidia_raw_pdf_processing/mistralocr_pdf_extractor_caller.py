@@ -24,7 +24,7 @@ def pdf_mistralocr_converter(ti: TaskInstance, **kwargs):
 
     s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
     files = list({file for file in s3_obj.list_files() if file.endswith('.pdf')})
-    print(files)
+    print(files) 
     for file in files:
         pdf_file = s3_obj.load_s3_pdf(file)
         pdf_bytes = io.BytesIO(pdf_file)
