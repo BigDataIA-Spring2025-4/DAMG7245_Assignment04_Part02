@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project focuses on designing an AI-powered information retrieval system that automates the extraction, processing, and analysis of financial reports. Using **Apache Airflow**, the system orchestrates the retrieval of NVIDIA’s quarterly financial statements, processes them with advanced text extraction methods, and stores the data efficiently for querying. The project incorporates **multiple chunking techniques** to optimize data segmentation and **embeddings** to enhance retrieval performance. A **Streamlit-based UI** enables users to explore the dataset and upload their own documents for analysis, ensuring an interactive and customizable experience.
+The project focuses on designing an AI-powered information retrieval system that automates the extraction, processing, and analysis of financial reports. Using **Apache Airflow**, the system orchestrates the retrieval of NVIDIA’s quarterly financial statements, processes them with advanced text extraction methods, and stores the data efficiently for querying. The project incorporates **multiple chunking techniques** to optimize data segmentation and **embeddings** to enhance retrieval performance. A **Streamlit-based UI** enables users to explore the dataset and upload their own documents for analysis, ensuring an interactive and customizable experience.
 
 ## Key Features
 
@@ -86,26 +86,139 @@ Video Walkthrough:
 
 ![Image]()
 
-### Workflow 
+### **Workflow**
 
-1. **User Interaction via Streamlit UI**
-    - Users select a task from the sidebar:
-        - **Trigger Airflow**: Initiates an Airflow DAG for scheduled tasks.
-        - **Query Financial Reports**: Extracts insights from NVIDIA’s financial reports based on user queries.
-        - **Query Document**: Parses and queries uploaded PDF documents.
+1. **Data Ingestion**:
+    - The system retrieves **NVIDIA quarterly financial reports** from the official website using a web scraping pipeline.
+    - Extracted reports (PDFs) are stored securely in **AWS S3** for further processing.
+    - Users can also **upload their own PDFs**, which are similarly stored in **S3**.
+2. **Document Processing & Chunking**:
+    - The selected document is parsed using **Docling** or **Mistral OCR**, extracting the text and converting it into structured data.
+    - The extracted text undergoes **chunking** using different strategies:
+        - **Markdown-based**: Splitting based on document sections.
+        - **Semantic segmentation**: Grouping related text intelligently.
+        - **Sliding window technique**: Overlapping text chunks for context preservation.
+3. **Embedding Generation & Storage**:
+    - Each processed chunk is **converted into OpenAI embeddings** for semantic search.
+    - The embeddings are stored in:
+        - **Pinecone** for cloud-based vector search.
+        - **ChromaDB** for local vector indexing.
+        - **AWS S3 (Pickle files)** as a manual storage alternative.
+4. **Query Processing & Retrieval**:
+    - Users interact with a **Streamlit application**, where they:
+        - Select a **document** from the stored dataset.
+        - Choose processing options such as **chunking method** and **vector storage**.
+        - Submit a **query** related to the selected document.
+    - The query request is sent to **FastAPI**, which determines the retrieval method based on user selection.
+    - **Relevant document chunks** are retrieved using the appropriate storage method (Pinecone, ChromaDB, or manual similarity computation).
+5. **Response Generation & Display**:
+    - Retrieved chunks are passed to an **LLM**, which generates a relevant response.
+    - The final output is sent back to the **Streamlit UI**, where users can view the extracted insights.
 
-2. **PDF Upload & Processing (If Querying a Document)**
-    - User uploads a PDF file.
-    - The file is read, converted to Base64, and sent to an API for processing.
-    - The API extracts text and returns Markdown content.
+## **Data Flow & API Processes**
 
-3. **Query Execution**
-    - User submits a query for either a financial report or an uploaded document.
-    - Selected parsing method, chunking strategy, and vector store are applied.
-    - The query is sent to an API endpoint for processing.
+### **1. User Input**
 
-4. **Response Handling**
-    - API returns the extracted response.
-    - The response is displayed in the chat interface.
-    - Conversation history is maintained using `st.session_state.messages`.
+Users provide input through the **Streamlit UI** or an API request, including:
+
+- **PDF Uploads**: Users can upload a document for extraction and processing.
+- **Query Requests**: Users can ask questions about NVIDIA reports or their own uploaded documents.
+
+### **2. Frontend (Streamlit UI)**
+
+The **Streamlit application** allows users to:
+
+- Upload **new PDFs** for analysis.
+- Select from existing **stored documents**.
+- Choose processing parameters (PDF parser, chunking method, embedding storage).
+- Submit queries and receive AI-generated responses.
+
+### **3. Backend (FastAPI & Airflow)**
+
+The **FastAPI backend** manages:
+
+- **Document processing** by calling Airflow workflows.
+- **Embedding retrieval** from Pinecone, ChromaDB, or manual similarity computation.
+- **Query handling** and response generation.
+
+**API Routes include:**
+
+- **/upload_pdf** → Uploads and processes a document.
+- **/process_document** → Parses, chunks, and stores embeddings.
+- **/query_document** → Retrieves relevant content based on user queries.
+
+### **4. Apache Airflow (Orchestration Engine)**
+
+- **Airflow DAGs** automate data ingestion, processing, and storage.
+- Ensures workflows run on demand.
+
+### **5. Vector Storage & Retrieval**
+
+The backend supports multiple storage options for embeddings:
+
+- **Pinecone**: Cloud-based vector search.
+- **ChromaDB**: Local vector database.
+- **Manual Computation**: Uses cosine similarity on locally stored embeddings in **AWS S3 Pickle files**.
+
+### **6. Query Execution & LLM Processing**
+
+- User queries are processed by FastAPI, which fetches relevant document chunks from **vector storage**.
+- The retrieved content is passed through an **LLM**, which generates a refined response.
+- The response is returned to the **Streamlit UI** for display.
+
+### **7. Deployment & Execution**
+
+- **Airflow & FastAPI** run as Docker containers for modular and scalable deployment.
+- **Streamlit UI** is hosted on a cloud platform for easy user access.
+- **AWS S3** stores both raw PDFs and processed embeddings for retrieval.
+
+## Installation Steps
+
+```
+Required Python Version 3.12.*
+```
+
+### 1. Cloning the Repository
+
+```bash
+git clone https://github.com/BigDataIA-Spring2025-4/DAMG7245_Assignment04_Part02.git
+cd DAMG7245_Assignment04_Part02
+```
+
+### 2. Setting up the virtual environment
+
+```bash
+python -m venv venvsource venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 3. AWS S3 Setup
+
+**Step 1: Create an AWS Account**
+
+- Go to [AWS Signup](https://aws.amazon.com/) and click **Create an AWS Account**.
+- Follow the instructions to enter your email, password, and billing details.
+- Verify your identity and choose a support plan.
+
+**Step 2: Log in to AWS Management Console**
+
+- Visit [AWS Console](https://aws.amazon.com/console/) and log in with your credentials.
+- Search for **S3** in the AWS services search bar and open it.
+
+**Step 3: Create an S3 Bucket**
+
+- Click **Create bucket**.
+- Enter a unique **Bucket name**.
+- Select a region closest to your users.
+- Configure settings as needed (e.g., versioning, encryption).
+- Click **Create bucket** to finalize.
+
+
+
+
+
+
+
+
+
 
