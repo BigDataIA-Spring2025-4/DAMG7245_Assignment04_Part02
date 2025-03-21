@@ -46,19 +46,9 @@ with Diagram("PDF RAG Application Architecture", show=False, filename="diagram",
         chromadb = Custom("Chroma DB", "./src/chroma.png")
         manual = Custom("Manual Embeddings", "./src/pickle.png")
 
-        # docling = Custom("Docling Tool", "./src/docling.png")
-        # litellm = Custom("Litellm", "./src/litellm.png")
-    
     # Connections
     user >> frontend >> pdf_input
     airflow >> web >> s3_storage >> [docling, mistral] >> chunkstrategy >> openai_embedding >> [pinecone, chromadb, manual]
     cloud_run >> docker_image >> backend >> [pinecone, chromadb, manual]
     frontend >> backend
     pdf_input >> [docling, mistral] >> chunkstrategy >> openai_embedding >> [pinecone, chromadb, manual]
-    # user >> pdf_input >> frontend >> backend# User provides input via URL or PDF upload to Streamlit UI
-      # Google Cloud Run runs the Docker image containing backend services
-    # backend >> docling  # Backend uses selected processing tools
-    # docling >> s3_storage  # Processed data is saved to Amazon S3
-    # s3_storage >> backend  # Backend retrieves processed data from Amazon S3
-    # backend >> frontend  # Backend sends messages to the frontend for user feedback
-    # litellm >> athina  # LLM sends processed data to Athina AI for logging and analysis
