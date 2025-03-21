@@ -18,7 +18,7 @@ def scrape_from_nvidia_website(**kwargs):
     try:
         # Set up the WebDriver with options - connect to Selenium service
         driver = webdriver.Remote(
-            command_executor='http://host.docker.internal:4444/wd/hub',
+            command_executor='http://selenium-chrome:4444/wd/hub',
             options=options
         )
 
