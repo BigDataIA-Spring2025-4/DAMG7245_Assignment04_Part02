@@ -8,6 +8,8 @@ from services.s3 import S3FileManager
 from features.chunking.chunk_strategy import markdown_chunking, semantic_chunking, sliding_window_chunking
 from features.pinecone.pinecone_openai import connect_to_pinecone_index, get_embedding, query_pinecone
 from features.chromadb.chromadb_openai import get_chroma_embeddings, query_chromadb
+from features.manual_rag.manual_stores import generate_response_manual, create_manual_vector_store_doc
+
 from openai import OpenAI
 from features.pdf_extraction.docling_pdf_extractor import pdf_docling_converter
 from features.pdf_extraction.mistralocr_pdf_extractor import pdf_mistralocr_converter
@@ -98,6 +100,16 @@ async def query_document(request: DocumentQueryRequest):
             print(message)
             answer = generate_model_response(message)
             print(answer)
+        
+        elif vector_store == "manual":
+            s3_obj = await create_manual_vector_store_doc(file_name, chunks, chunk_strategy, parser)
+            result_chunks = generate_response_manual(s3_obj, parser, chunk_strategy, query, top_k)
+            
+            message = generate_openai_message_document(query, result_chunks)
+            print(message)
+            answer = generate_model_response(message)
+            print(answer)
+
         return {
             # "answer": parser + chunk_strategy + vector_store + query + file_name + str(len(chunks)),
             "answer": answer
@@ -134,7 +146,15 @@ def query_nvdia_documents(request: NVDIARequest):
                 answer = generate_model_response(message)
 
         elif vector_store == "manual":
-            pass
+            base_path = "nvdia/"
+            s3_obj = S3FileManager(AWS_BUCKET_NAME, base_path)
+            chunks = generate_response_manual(s3_obj, parser = parser, chunk_strategy = chunk_strategy, query = query, top_k=top_k, year = year, quarter = quarter)
+            if len(chunks) == 0:
+                raise HTTPException(status_code=500, detail="No relevant data found in the document")
+            else:
+                message = generate_openai_message(chunks, year, quarter, query)
+                answer = generate_model_response(message)
+        
         return {
             # "answer": year + quarter[0] + parser + chunk_strategy + vector_store + query,
             "answer": answer
@@ -170,6 +190,9 @@ def generate_response_from_chroma(parser, chunk_strategy, query, top_k, year, qu
 def generate_response_doc_chroma(file_name, parser, chunking_strategy, query, top_k, s3_obj):
     response = query_chromadb_doc(file_name, parser, chunking_strategy, query, top_k, s3_obj)
     return response
+
+
+
 
 def generate_openai_message_document(query, chunks):
     prompt = f"""
