@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL=os.getenv("API_URL")
+AIRFLOW_API_URL = "http://35.209.49.151:8080"
 
 pdfparser = {
         "Mistral": "mistral",
@@ -31,7 +32,25 @@ if "file_upload" not in st.session_state:
 
 def trigger_airflow_dag():
     st.write("Now triggering airflow dag...")
-    
+    year = st.selectbox("Select Year", range(2024, 2020,-1))
+    trigger = st.button("Trigger Airflow DAG", use_container_width=True)
+    if trigger:
+        # Payload for triggering the DAG
+        payload = {
+            "conf": {
+                "year": year
+            }
+        }
+        # Trigger the DAG via Airflow REST API
+        response = requests.post(
+            f"{AIRFLOW_API_URL}/api/v1/dags/nvidia_financial_docs_scraper_and_loader/dagRuns",
+            json=payload,
+            auth=(f"{os.getenv('AIRFLOW_USER')}", f"{os.getenv('AIRFLOW_PASSCODE')}")
+        )
+        if response.status_code == 200:
+            st.success("DAG triggered successfully!")
+        else:
+            st.error(f"Failed to trigger DAG: {response.text}")
 def main():
     
     st.title("NVDIA Financial Reports Analysis")
